@@ -1,0 +1,48 @@
+import Link from 'next/link'
+
+interface BlogCardProps {
+  id: string
+  title: string
+  excerpt: string
+  date: string
+  author?: string
+  tags?: string[]
+}
+
+export default function BlogCard({ id, title, excerpt, date, author, tags }: BlogCardProps) {
+  return (
+    <Link
+      href={`/blog/${id}`}
+      className="block bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow border border-soft-gray hover:border-bronze group"
+    >
+      <h3 className="text-2xl font-bold font-serif mb-3 text-charcoal group-hover:text-bronze transition-colors">
+        {title}
+      </h3>
+      <div className="text-sm text-charcoal-light mb-3">
+        <span>{new Date(date).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}</span>
+        {author && <span className="mx-2">•</span>}
+        {author && <span>{author}</span>}
+      </div>
+      <p className="text-charcoal-light mb-4 line-clamp-3">
+        {excerpt}
+      </p>
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-xs px-2 py-1 bg-soft-gray text-charcoal-light rounded"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </Link>
+  )
+}
+
