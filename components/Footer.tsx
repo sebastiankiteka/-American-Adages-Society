@@ -1,43 +1,46 @@
+'use client'
+
 import Link from 'next/link'
+import MailingListSignup from './MailingListSignup'
 
 export default function Footer() {
   return (
-    <footer className="bg-charcoal text-cream py-12 px-4 mt-auto">
+    <footer className="bg-nav-bg text-text-inverse py-12 px-4 mt-auto">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
-            <h3 className="text-xl font-bold font-serif mb-4">American Adages Society</h3>
-            <p className="text-sm text-soft-gray mb-4">
+            <h3 className="text-xl font-bold font-serif mb-4 text-text-inverse">American Adages Society</h3>
+            <p className="text-sm text-text-inverse opacity-90 mb-4">
               Big Wisdom, small sentences.
             </p>
-            <p className="text-sm text-soft-gray">
+            <p className="text-sm text-text-inverse opacity-75">
               at the University of Texas - Austin
             </p>
-            <p className="text-xs text-soft-gray italic mt-2">
+            <p className="text-xs text-text-inverse opacity-70 italic mt-2">
               Recognized student organization, not officially affiliated
             </p>
           </div>
 
           <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <h4 className="text-lg font-semibold mb-4 text-text-inverse">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/about" className="hover:text-bronze transition-colors">
+                <Link href="/about" className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/archive" className="hover:text-bronze transition-colors">
+                <Link href="/archive" className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors">
                   Archive
                 </Link>
               </li>
               <li>
-                <Link href="/events" className="hover:text-bronze transition-colors">
+                <Link href="/events" className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors">
                   Events
                 </Link>
               </li>
               <li>
-                <Link href="/get-involved" className="hover:text-bronze transition-colors">
+                <Link href="/get-involved" className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors">
                   Get Involved
                 </Link>
               </li>
@@ -46,7 +49,7 @@ export default function Footer() {
                   href="https://utexas.campuslabs.com/engage/organization/americanadagessociety" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-bronze transition-colors font-semibold flex items-center gap-1"
+                  className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors font-semibold flex items-center gap-1"
                 >
                   <span>HornsLink</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,13 +61,13 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-lg font-semibold mb-4">Connect</h4>
+            <h4 className="text-lg font-semibold mb-4 text-text-inverse">Connect</h4>
             <div className="flex space-x-4 mb-4">
               <a
                 href="https://www.instagram.com/americanadagessociety/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-bronze transition-colors"
+                className="hover:text-accent-primary transition-colors"
                 aria-label="Instagram"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -75,7 +78,7 @@ export default function Footer() {
                 href="https://www.linkedin.com/company/american-adages-society"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-bronze transition-colors"
+                className="hover:text-accent-primary transition-colors"
                 aria-label="LinkedIn"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -84,7 +87,7 @@ export default function Footer() {
               </a>
               <a
                 href="mailto:sebastiankiteka@utexas.edu"
-                className="hover:text-bronze transition-colors"
+                className="hover:text-accent-primary transition-colors"
                 aria-label="Email"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,23 +95,27 @@ export default function Footer() {
                 </svg>
               </a>
             </div>
-            <p className="text-sm text-soft-gray mb-2">
-              <a href="mailto:sebastiankiteka@utexas.edu" className="hover:text-bronze">
+            <p className="text-sm text-text-inverse opacity-75 mb-2">
+              <a href="mailto:sebastiankiteka@utexas.edu" className="hover:text-accent-primary hover:opacity-100 transition-colors">
                 sebastiankiteka@utexas.edu
               </a>
             </p>
-            <p className="text-xs text-soft-gray">
+            <p className="text-xs text-text-inverse opacity-70 mb-4">
               <a 
                 href="/admin/login" 
-                className="hover:text-bronze transition-colors"
+                className="hover:text-accent-primary hover:opacity-100 transition-colors"
               >
                 Admin Login
               </a>
             </p>
+            <div className="mt-4">
+              <h4 className="text-lg font-semibold mb-4 text-text-inverse">Newsletter</h4>
+              <MailingListSignup source="footer" compact={true} />
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-charcoal-light pt-8 text-center text-sm text-soft-gray">
+        <div className="border-t border-border-medium pt-8 text-center text-sm text-text-inverse opacity-80">
           <p>&copy; {new Date().getFullYear()} American Adages Society. All rights reserved.</p>
         </div>
       </div>

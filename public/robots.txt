@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /profile/edit
+Disallow: /profile/inbox
+
+Sitemap: https://americanadagessociety.org/sitemap.xml
+
+

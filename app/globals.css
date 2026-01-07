@@ -4,11 +4,90 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   LIGHT MODE - Explicit Design Tokens
+   No shared values with dark mode
+   WCAG AA compliant contrast ratios
+   ============================================ */
 :root {
-  --cream: #F5F1E8;
-  --soft-gray: #E8E5DF;
-  --charcoal: #2C2C2C;
-  --bronze: #8B7355;
+  /* Backgrounds - Light Mode */
+  --bg-primary: #F7F2E8;        /* Main page background - warm parchment */
+  --bg-secondary: #F1EBDF;      /* Secondary sections - slightly darker parchment */
+  --card-bg: #FFFFFF;           /* Card/panel background - pure white */
+  --card-bg-muted: #F9F7F3;     /* Subtle card variant - off-white */
+  --card-bg-olive: #E8E6D5;     /* Olive/hay backgrounds - warm neutral */
+  --nav-bg: #2C2C2C;            /* Navigation - dark charcoal */
+  --section-divider: #E0D9C8;   /* Section separators - visible divider */
+  
+  /* Text Colors - Light Mode (true black/near-black on light backgrounds) */
+  --text-primary: #111111;      /* Primary text - true black for max contrast */
+  --text-secondary: #222222;    /* Secondary text - near-black (was grey, now black) */
+  --text-muted: #333333;        /* Muted text - dark grey but still readable */
+  --text-metadata: #444444;     /* Metadata text - slightly lighter but still dark */
+  --text-on-olive: #111111;     /* Text on olive/hay backgrounds - black */
+  --text-inverse: #F2F2F2;      /* Text on dark backgrounds (nav) - near-white */
+  
+  /* Borders & Dividers - Light Mode */
+  --border-subtle: #D0C9BA;     /* Subtle borders - visible but soft */
+  --border-medium: #B8AC95;     /* Medium borders - more defined */
+  --border-strong: #8B7355;     /* Strong borders - accent color */
+  --border-section: #D0C9BA;    /* Section dividers - clear separation */
+  
+  /* Accent Colors - Light Mode */
+  --accent-primary: #8B7355;    /* Primary accent - bronze */
+  --accent-hover: #A0886A;      /* Hover state - lighter bronze */
+  --accent-dark: #6B5A42;       /* Dark accent variant */
+  
+  /* Status Colors - Light Mode */
+  --success-bg: #F0F9F4;
+  --success-text: #166534;
+  --error-bg: #FEF2F2;
+  --error-text: #DC2626;
+  --warning-bg: #FFFBEB;
+  --warning-text: #D97706;
+}
+
+/* ============================================
+   DARK MODE - Explicit Design Tokens
+   No shared values with light mode
+   High-contrast light text on olive backgrounds
+   ============================================ */
+.dark {
+  /* Backgrounds - Dark Mode */
+  --bg-primary: #121212;        /* Main page background - true dark */
+  --bg-secondary: #1A1A1A;      /* Secondary sections - slightly lighter */
+  --card-bg: #2A2F24;           /* Card/panel background - muted olive */
+  --card-bg-muted: #2F3428;     /* Subtle card variant - slightly lighter olive */
+  --card-bg-olive: #2A2F24;     /* Olive background (same as card-bg in dark) */
+  --nav-bg: #0A0A0A;            /* Navigation - darker than page */
+  --section-divider: #2E2E2E;   /* Section separators - visible in dark */
+  
+  /* Text Colors - Dark Mode (high-contrast light on dark/olive) */
+  --text-primary: #F2F2F2;      /* Primary text - near-white for high contrast */
+  --text-secondary: #E5E5E0;    /* Secondary text - light cream */
+  --text-muted: #D0D0C8;        /* Muted text - light but readable */
+  --text-metadata: #C0C0B8;     /* Metadata text - slightly dimmer but clear */
+  --text-on-olive: #F2F2F2;     /* Text on olive backgrounds - near-white */
+  --text-inverse: #F2F2F2;      /* Text on dark backgrounds (nav) - near-white */
+  
+  /* Borders & Dividers - Dark Mode */
+  --border-subtle: #3A3F34;     /* Subtle borders - visible on olive cards */
+  --border-medium: #4A4F44;     /* Medium borders - more defined */
+  --border-strong: #C2A06A;     /* Strong borders - lighter bronze */
+  --border-section: #2E2E2E;    /* Section dividers - clear separation */
+  
+  /* Accent Colors - Dark Mode */
+  --accent-primary: #C2A06A;    /* Primary accent - lighter bronze */
+  --accent-hover: #D4B482;      /* Hover state - even lighter */
+  --accent-dark: #A0886A;       /* Dark accent variant */
+  
+  /* Status Colors - Dark Mode */
+  --success-bg: #1A3A2A;
+  --success-text: #4ADE80;
+  --error-bg: #3A1F1F;
+  --error-text: #F87171;
+  --warning-bg: #3A2F1A;
+  --warning-text: #FBBF24;
 }
 
 * {
@@ -22,19 +101,20 @@ html {
 }
 
 body {
-  color: var(--charcoal);
-  background: var(--cream);
+  color: var(--text-primary);
+  background: var(--bg-primary);
   font-family: 'Inter', 'Open Sans', system-ui, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Merriweather', Georgia, serif;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--charcoal);
+  color: var(--text-primary);
 }
 
 a {
@@ -44,17 +124,120 @@ a {
 }
 
 a:hover {
-  color: var(--bronze);
+  color: var(--accent-primary);
 }
 
-/* Accessibility improvements */
+/* Accessibility improvements - Focus indicators */
 :focus-visible {
-  outline: 2px solid var(--bronze);
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 /* Smooth transitions */
 * {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Toast animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Print styles for adage detail pages */
+@media print {
+  /* Hide non-essential elements */
+  nav,
+  footer,
+  .no-print,
+  button,
+  .share-buttons,
+  .comments-section,
+  .back-to-top,
+  .reading-progress {
+    display: none !important;
+  }
+
+  /* Optimize page layout */
+  body {
+    background: white;
+    color: black;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Ensure content is visible */
+  article,
+  .prose {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Page breaks */
+  h1, h2 {
+    page-break-after: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+  }
+
+  /* Links */
+  a {
+    color: black;
+    text-decoration: underline;
+  }
+
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+    font-size: 10pt;
+    color: #666;
+  }
+
+  /* Remove backgrounds and shadows */
+  * {
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Keep borders for structure */
+  .border,
+  .border-soft-gray {
+    border: 1px solid #ccc !important;
+  }
+
+  /* Optimize spacing */
+  .py-12,
+  .py-8,
+  .px-4 {
+    padding: 0 !important;
+  }
+
+  .mb-8,
+  .mb-6,
+  .mb-4 {
+    margin-bottom: 1em !important;
+  }
 }
 

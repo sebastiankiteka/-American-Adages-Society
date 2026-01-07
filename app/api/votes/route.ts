@@ -1,114 +1,87 @@
-// API route for voting system
+// API route for votes
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
+import { checkRateLimit } from '@/lib/rate-limit'
 
-// POST /api/votes - Create or update vote
+// POST /api/votes - Create or update a vote
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
+
     if (!user) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'Authentication required',
+        error: 'Unauthorized',
       }, { status: 401 })
     }
 
-    // Check if user is restricted or banned
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    // Rate limiting: 30 votes per 15 minutes per user
+    const rateLimit = checkRateLimit(`votes:${user.id}`, {
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 30,
+    })
 
-    if (userData?.role === 'banned' || userData?.role === 'restricted') {
+    if (!rateLimit.allowed) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: 'Too many votes. Please wait a moment before voting again.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+          },
+        }
+      )
+    }
+
+    // Check if email is verified
+    if (!('email_verified' in user) || !user.email_verified) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'You do not have permission to vote',
+        error: 'Please verify your email before voting',
       }, { status: 403 })
     }
 
     const body = await request.json()
     const { target_type, target_id, value } = body
 
-    if (!target_type || !target_id || !value) {
+    // Validate required fields
+    if (!target_type || !target_id || value === undefined) {
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'target_type, target_id, and value are required',
       }, { status: 400 })
     }
 
-    if (value !== 1 && value !== -1) {
+    // Validate target_type
+    const validTargetTypes = ['adage', 'blog', 'comment']
+    if (!validTargetTypes.includes(target_type)) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'value must be 1 or -1',
+        error: 'Invalid target_type',
       }, { status: 400 })
     }
 
-    // Check if vote already exists
-    const { data: existing } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('target_type', target_type)
-      .eq('target_id', target_id)
-      .single()
+    // Validate value
+    if (value !== -1 && value !== 1 && value !== 0) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'value must be -1, 0, or 1',
+      }, { status: 400 })
+    }
 
-    if (existing) {
-      // Update existing vote
-      if (existing.value === value) {
-        // Same vote - remove it (toggle off)
-        const { error } = await supabase
-          .from('votes')
-          .delete()
-          .eq('id', existing.id)
-
-        if (error) {
-          return NextResponse.json<ApiResponse>({
-            success: false,
-            error: error.message,
-          }, { status: 400 })
-        }
-
-        return NextResponse.json<ApiResponse>({
-          success: true,
-          message: 'Vote removed',
-          data: { removed: true },
-        })
-      } else {
-        // Different vote - update it
-        const { data, error } = await supabase
-          .from('votes')
-          .update({ value })
-          .eq('id', existing.id)
-          .select()
-          .single()
-
-        if (error) {
-          return NextResponse.json<ApiResponse>({
-            success: false,
-            error: error.message,
-          }, { status: 400 })
-        }
-
-        return NextResponse.json<ApiResponse>({
-          success: true,
-          data,
-          message: 'Vote updated',
-        })
-      }
-    } else {
-      // Create new vote
-      const { data, error } = await supabase
+    if (value === 0) {
+      // Remove vote
+      const { error } = await supabase
         .from('votes')
-        .insert({
-          user_id: user.id,
-          target_type,
-          target_id,
-          value,
-        })
-        .select()
-        .single()
+        .delete()
+        .eq('user_id', user.id)
+        .eq('target_type', target_type)
+        .eq('target_id', target_id)
 
       if (error) {
         return NextResponse.json<ApiResponse>({
@@ -116,19 +89,77 @@ export async function POST(request: NextRequest) {
           error: error.message,
         }, { status: 400 })
       }
+    } else {
+      // First, check if vote exists
+      const { data: existingVote, error: checkError } = await supabase
+        .from('votes')
+        .select('id, value')
+        .eq('user_id', user.id)
+        .eq('target_type', target_type)
+        .eq('target_id', target_id)
+        .maybeSingle()
 
-      return NextResponse.json<ApiResponse>({
-        success: true,
-        data,
-        message: 'Vote created',
-      }, { status: 201 })
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found" which is fine
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: checkError.message,
+        }, { status: 400 })
+      }
+
+      if (existingVote) {
+        // Update existing vote
+        const { error } = await supabase
+          .from('votes')
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq('id', existingVote.id)
+
+        if (error) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: error.message,
+          }, { status: 400 })
+        }
+      } else {
+        // Insert new vote
+        const { error } = await supabase
+          .from('votes')
+          .insert({
+            user_id: user.id,
+            target_type,
+            target_id,
+            value,
+          })
+
+        if (error) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: error.message,
+          }, { status: 400 })
+        }
+      }
     }
+
+    // Return updated vote count for immediate UI update
+    const { data: allVotes } = await supabase
+      .from('votes')
+      .select('value')
+      .eq('target_type', target_type)
+      .eq('target_id', target_id)
+
+    const score = allVotes?.reduce((sum, v) => sum + v.value, 0) || 0
+
+    return NextResponse.json<ApiResponse>({
+      success: true,
+      message: 'Vote recorded',
+      data: {
+        score,
+        voteCount: allVotes?.length || 0,
+      },
+    })
   } catch (error: any) {
     return NextResponse.json<ApiResponse>({
       success: false,
-      error: error.message || 'Failed to process vote',
-    }, { status: 500 })
+      error: error.message || 'Failed to record vote',
+    }, { status: error.message === 'Unauthorized' ? 401 : 500 })
   }
 }
-
-

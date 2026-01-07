@@ -1,6 +1,6 @@
 // API route for adages CRUD operations
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, ApiResponse } from '@/lib/api-helpers'
 import { Adage } from '@/lib/db-types'
 
@@ -31,8 +31,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (featured === 'true') {
-      query = query.eq('featured', true)
-        .or(`featured_until.is.null,featured_until.gt.${new Date().toISOString()}`)
+      const now = new Date().toISOString()
+      query = query
+        .eq('featured', true)
+        .or(`featured_until.is.null,featured_until.gt.${now}`)
     }
 
     const { data, error } = await query
@@ -44,28 +46,59 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get vote scores for each adage
+    // Get vote scores, save counts, and featured info for each adage
     const adagesWithScores = await Promise.all(
       (data || []).map(async (adage) => {
-        const { data: votes } = await supabase
-          .from('votes')
-          .select('value')
-          .eq('target_type', 'adage')
-          .eq('target_id', adage.id)
+        const [votesResult, savedResult, featuredHistory] = await Promise.all([
+          supabase
+            .from('votes')
+            .select('value')
+            .eq('target_type', 'adage')
+            .eq('target_id', adage.id),
+          supabaseAdmin
+            .from('saved_adages')
+            .select('id', { count: 'exact', head: true })
+            .eq('adage_id', adage.id)
+            .is('deleted_at', null),
+          // Get current featured reason and dates if featured
+          adage.featured
+            ? supabase
+                .from('featured_adages_history')
+                .select('reason, featured_from, featured_until')
+                .eq('adage_id', adage.id)
+                .or(`featured_until.is.null,featured_until.gt.${new Date().toISOString()}`)
+                .order('featured_from', { ascending: false })
+                .limit(1)
+                .single()
+            : Promise.resolve({ data: null, error: null }),
+        ])
 
-        const score = votes?.reduce((sum, v) => sum + v.value, 0) || 0
+        const score = votesResult.data?.reduce((sum, v) => sum + v.value, 0) || 0
+        const saveCount = savedResult.count || 0
+        const featuredReason = featuredHistory.data?.reason || null
+        const featuredFrom = featuredHistory.data?.featured_from || null
+        const featuredUntil = featuredHistory.data?.featured_until || null
 
         return {
           ...adage,
           score,
+          save_count: saveCount,
+          featured_reason: featuredReason,
+          featured_from: featuredFrom,
+          featured_until: featuredUntil,
         }
       })
     )
 
-    return NextResponse.json<ApiResponse<Adage[]>>({
+    const response = NextResponse.json<ApiResponse<Adage[]>>({
       success: true,
       data: adagesWithScores,
     })
+
+    // Cache for 5 minutes (300 seconds) for frequently accessed data
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    
+    return response
   } catch (error: any) {
     return NextResponse.json<ApiResponse>({
       success: false,
@@ -85,6 +118,7 @@ export async function POST(request: NextRequest) {
       .insert({
         ...body,
         created_by: user.id,
+        published_at: body.published_at || new Date().toISOString(),
       })
       .select()
       .single()

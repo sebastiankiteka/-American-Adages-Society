@@ -1,7 +1,8 @@
 // API route for individual adage operations
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse } from '@/lib/api-helpers'
+import { errorLogger } from '@/lib/error-logger'
 import { Adage } from '@/lib/db-types'
 
 // GET /api/adages/[id] - Get single adage with full details
@@ -32,25 +33,38 @@ export async function GET(
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     await trackView('adage', id, user?.id, ipAddress)
 
-    // Get related data
-    const [variants, translations, related, usageExamples, timeline, comments, citations] = await Promise.all([
-      supabase.from('adage_variants').select('*').eq('adage_id', id).is('deleted_at', null),
-      supabase.from('adage_translations').select('*').eq('adage_id', id).is('deleted_at', null),
-      supabase.from('related_adages').select('*,related_adage:adages!related_adage_id(*)').eq('adage_id', id),
-      supabase.from('adage_usage_examples').select('*,created_by_user:users!created_by(id,username,display_name)').eq('adage_id', id).is('deleted_at', null).is('hidden_at', null),
-      supabase.from('adage_timeline').select('*').eq('adage_id', id).is('deleted_at', null).order('time_period_start'),
-      supabase.from('comments').select('*,user:users!user_id(id,username,display_name,profile_image_url)').eq('target_type', 'adage').eq('target_id', id).is('deleted_at', null).is('hidden_at', null).order('created_at'),
-      supabase.from('citations').select('*,submitted_by_user:users!submitted_by(id,username,display_name)').eq('adage_id', id).is('deleted_at', null),
+    // Get related data - use supabaseAdmin to bypass RLS
+    const [variants, translations, related, usageExamples, timeline, allComments, citations] = await Promise.all([
+      supabaseAdmin.from('adage_variants').select('*').eq('adage_id', id).is('deleted_at', null),
+      supabaseAdmin.from('adage_translations').select('*').eq('adage_id', id).is('deleted_at', null),
+      supabaseAdmin.from('related_adages').select('*,related_adage:adages!related_adage_id(*)').eq('adage_id', id),
+      supabaseAdmin.from('adage_usage_examples').select('*,created_by_user:users!created_by(id,username,display_name)').eq('adage_id', id).is('deleted_at', null).is('hidden_at', null),
+      supabaseAdmin.from('adage_timeline').select('*').eq('adage_id', id).is('deleted_at', null).order('time_period_start'),
+      supabaseAdmin.from('comments').select('*,user:users!user_id(id,username,display_name,profile_image_url)').eq('target_type', 'adage').eq('target_id', id).is('deleted_at', null).is('hidden_at', null).order('created_at'),
+      supabaseAdmin.from('citations').select('*,submitted_by_user:users!submitted_by(id,username,display_name)').eq('adage_id', id).is('deleted_at', null),
     ])
 
-    // Get vote score
-    const { data: votes } = await supabase
-      .from('votes')
-      .select('value')
-      .eq('target_type', 'adage')
-      .eq('target_id', id)
+    // Separate commendations (admin/official comments) from regular comments
+    const commentsData = allComments.data || []
+    const commendations = commentsData.filter((c: any) => c.is_commendation === true)
+    const regularComments = commentsData.filter((c: any) => c.is_commendation !== true)
 
-    const score = votes?.reduce((sum, v) => sum + v.value, 0) || 0
+    // Get vote score and save count
+    const [votesResult, savedResult] = await Promise.all([
+      supabase
+        .from('votes')
+        .select('value')
+        .eq('target_type', 'adage')
+        .eq('target_id', id),
+      supabaseAdmin
+        .from('saved_adages')
+        .select('id', { count: 'exact', head: true })
+        .eq('adage_id', id)
+        .is('deleted_at', null),
+    ])
+
+    const score = votesResult.data?.reduce((sum, v) => sum + v.value, 0) || 0
+    const saveCount = savedResult.count || 0
 
     // Get user's vote if logged in
     let userVote = null
@@ -65,22 +79,35 @@ export async function GET(
       userVote = vote?.value || null
     }
 
-    return NextResponse.json<ApiResponse>({
+    const response = NextResponse.json<ApiResponse>({
       success: true,
       data: {
         ...adage,
         score,
+        save_count: saveCount,
         userVote,
         variants: variants.data || [],
         translations: translations.data || [],
         related: related.data || [],
         usageExamples: usageExamples.data || [],
         timeline: timeline.data || [],
-        comments: comments.data || [],
+        comments: regularComments,
+        commendations: commendations,
         citations: citations.data || [],
       },
     })
+
+    // Cache for 10 minutes (600 seconds) for individual adage pages
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200')
+    
+    return response
   } catch (error: any) {
+    const user = await getCurrentUser()
+    errorLogger.logError(error, {
+      userId: user?.id,
+      url: `/api/adages/${params.id}`,
+      action: 'GET',
+    })
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch adage',
@@ -98,9 +125,16 @@ export async function PUT(
     const { id } = params
     const body = await request.json()
 
+    // Add updated_by to track who made the change
+    const updateData = {
+      ...body,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    }
+
     const { data, error } = await supabase
       .from('adages')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -120,6 +154,11 @@ export async function PUT(
       message: 'Adage updated successfully',
     })
   } catch (error: any) {
+    errorLogger.logError(error, {
+      userId: (await requireAdmin()).id,
+      url: `/api/adages/${id}`,
+      action: 'PUT',
+    })
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to update adage',
@@ -161,5 +200,3 @@ export async function DELETE(
     }, { status: error.message === 'Unauthorized' || error.message === 'Insufficient permissions' ? 401 : 500 })
   }
 }
-
-

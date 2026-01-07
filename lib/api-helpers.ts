@@ -23,13 +23,46 @@ export interface ApiResponse<T = any> {
   message?: string
 }
 
-// Get current user session
+// Get current user session with full user data from database
 export async function getCurrentUser() {
   const session = await auth()
   if (!session?.user) {
     return null
   }
-  return session.user
+
+  const userId = (session.user as any).id
+  if (!userId) {
+    return null
+  }
+
+  // Fetch full user data including email_verified from database
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, email, username, display_name, role, email_verified')
+    .eq('id', userId)
+    .is('deleted_at', null)
+    .single()
+
+  if (error || !user) {
+    // If DB fetch fails, log error but try to return session data with email_verified as false
+    // This prevents blocking users if there's a temporary DB issue
+    console.error('Failed to fetch user from database:', error)
+    return {
+      ...session.user,
+      email_verified: false, // Default to false if we can't fetch from DB
+    } as any
+  }
+
+  // Always return database data, which includes email_verified
+  // Ensure email_verified is a boolean (handle null values)
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    display_name: user.display_name,
+    role: user.role,
+    email_verified: user.email_verified === true, // Explicitly convert to boolean
+  }
 }
 
 // Check if user has required role

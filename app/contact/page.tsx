@@ -1,8 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+
+interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
 
 export default function Contact() {
+  const { data: session } = useSession()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -10,54 +19,101 @@ export default function Contact() {
     message: '',
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [userData, setUserData] = useState<any>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (session?.user) {
+      // Fetch user data to auto-fill form
+      fetch('/api/users/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setUserData(data.data)
+            setFormData(prev => ({
+              ...prev,
+              name: data.data.display_name || data.data.username || '',
+              email: data.data.email || '',
+            }))
+          }
+        })
+        .catch(err => console.error('Failed to fetch user data:', err))
+    }
+  }, [session])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In production, this would submit to a backend API
-    console.log('Contact form submitted:', formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          category: 'general',
+        }),
       })
-    }, 3000)
+
+      const result: ApiResponse = await response.json()
+
+      if (result.success) {
+        setSubmitted(true)
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: '',
+        })
+        setTimeout(() => {
+          setSubmitted(false)
+        }, 5000)
+      } else {
+        setError(result.error || 'Failed to send message. Please try again.')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send message. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-cream py-12 px-4">
+    <div className="min-h-screen bg-bg-primary py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center text-charcoal">
+        <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center text-text-primary">
           Contact Us
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {/* Contact Information */}
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-soft-gray">
-            <h2 className="text-2xl font-bold font-serif mb-6 text-charcoal">
+          <div className="bg-card-bg p-8 rounded-lg shadow-sm border border-border-medium">
+            <h2 className="text-2xl font-bold font-serif mb-6 text-text-primary">
               Get in Touch
             </h2>
-            <div className="space-y-4 text-charcoal-light">
+            <div className="space-y-4 text-text-primary">
               <div>
-                <h3 className="font-semibold text-charcoal mb-2">Email</h3>
+                <h3 className="font-semibold text-text-primary mb-2">Email</h3>
                 <a
                   href="mailto:sebastiankiteka@utexas.edu"
-                  className="text-bronze hover:underline"
+                  className="text-accent-primary hover:underline"
                 >
                   sebastiankiteka@utexas.edu
                 </a>
               </div>
               <div>
-                <h3 className="font-semibold text-charcoal mb-2">Location</h3>
+                <h3 className="font-semibold text-text-primary mb-2">Location</h3>
                 <p>at the University of Texas - Austin</p>
                 <p className="text-sm mt-1">Austin, Texas</p>
               </div>
-              <div className="bg-soft-gray p-4 rounded-lg border-2 border-bronze/30">
-                <h3 className="font-semibold text-charcoal mb-2 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-card-bg-muted p-4 rounded-lg border-2 border-accent-primary/30">
+                <h3 className="font-semibold text-text-primary mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                   HornsLink
@@ -66,7 +122,7 @@ export default function Contact() {
                   href="https://utexas.campuslabs.com/engage/organization/americanadagessociety"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-bronze hover:underline font-medium flex items-center gap-1"
+                  className="text-accent-primary hover:underline font-medium flex items-center gap-1"
                 >
                   <span>View our official HornsLink page</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,13 +131,13 @@ export default function Contact() {
                 </a>
               </div>
               <div>
-                <h3 className="font-semibold text-charcoal mb-4">Follow Us</h3>
+                <h3 className="font-semibold text-text-primary mb-4">Follow Us</h3>
                 <div className="flex space-x-4">
                   <a
                     href="https://www.instagram.com/americanadagessociety/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-bronze transition-colors"
+                    className="hover:text-accent-primary transition-colors"
                     aria-label="Instagram"
                   >
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -92,7 +148,7 @@ export default function Contact() {
                     href="https://www.linkedin.com/company/american-adages-society"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-bronze transition-colors"
+                    className="hover:text-accent-primary transition-colors"
                     aria-label="LinkedIn"
                   >
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -105,14 +161,14 @@ export default function Contact() {
           </div>
 
           {/* Map/Location Reference */}
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-soft-gray">
-            <h2 className="text-2xl font-bold font-serif mb-6 text-charcoal">
+          <div className="bg-card-bg p-8 rounded-lg shadow-sm border border-border-medium">
+            <h2 className="text-2xl font-bold font-serif mb-6 text-text-primary">
               Find Us
             </h2>
-            <div className="bg-soft-gray rounded-lg h-64 flex items-center justify-center text-charcoal-light">
+            <div className="bg-card-bg-muted rounded-lg h-64 flex items-center justify-center text-text-metadata">
               <div className="text-center">
                 <svg
-                  className="w-16 h-16 mx-auto mb-4 text-bronze"
+                  className="w-16 h-16 mx-auto mb-4 text-accent-primary"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -120,7 +176,7 @@ export default function Contact() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <p className="font-semibold text-charcoal">at the University of Texas - Austin</p>
+                <p className="font-semibold text-text-primary">at the University of Texas - Austin</p>
                 <p className="text-sm mt-2">Austin, Texas</p>
                 <p className="text-sm mt-4">Meeting locations vary by event.</p>
                 <p className="text-sm">Check our Events page for details.</p>
@@ -130,24 +186,29 @@ export default function Contact() {
         </div>
 
         {/* Contact Form */}
-        <section className="bg-white p-8 md:p-12 rounded-lg shadow-sm border border-soft-gray">
-          <h2 className="text-3xl font-bold font-serif mb-6 text-charcoal">
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
             Send Us a Message
           </h2>
-          <p className="text-charcoal-light mb-8">
+          <p className="text-text-primary mb-8">
             Have a question, suggestion, or want to propose an adage for our archive? 
             Fill out the form below, and we'll get back to you as soon as possible.
           </p>
 
           {submitted ? (
-            <div className="bg-green-50 border border-green-200 text-green-800 p-6 rounded-lg">
+            <div className="bg-success-bg border border-success-text/30 text-success-text p-6 rounded-lg">
               <p className="font-semibold">Thank you for your message!</p>
               <p>We'll be in touch soon.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-error-bg border border-error-text/30 text-error-text px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-text-primary mb-2">
                   Name *
                 </label>
                 <input
@@ -156,12 +217,12 @@ export default function Contact() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
                   Email *
                 </label>
                 <input
@@ -170,12 +231,12 @@ export default function Contact() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="subject" className="block text-sm font-medium text-text-primary mb-2">
                   Subject *
                 </label>
                 <input
@@ -184,12 +245,12 @@ export default function Contact() {
                   required
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="message" className="block text-sm font-medium text-text-primary mb-2">
                   Message *
                 </label>
                 <textarea
@@ -198,15 +259,16 @@ export default function Contact() {
                   required
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full md:w-auto px-8 py-3 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors font-medium"
+                disabled={loading}
+                className="w-full md:w-auto px-8 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send Message
+                {loading ? 'Sending...' : 'Send Message'}
               </button>
             </form>
           )}

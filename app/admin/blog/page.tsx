@@ -2,61 +2,164 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getBlogPosts, addBlogPost, updateBlogPost, deleteBlogPost, type BlogPost } from '@/lib/adminData'
+import { useSession } from 'next-auth/react'
+import { BlogPost } from '@/lib/db-types'
+import ContentPreview from '@/components/ContentPreview'
+
+interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
 
 export default function AdminBlog() {
-  const [authenticated, setAuthenticated] = useState(false)
+  const { data: session, status } = useSession()
   const [posts, setPosts] = useState<BlogPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState<Partial<BlogPost>>({})
   const router = useRouter()
 
+  // Check authentication
   useEffect(() => {
-    const isAuth = localStorage.getItem('adminAuthenticated') === 'true'
-    if (!isAuth) {
+    if (status === 'loading') return
+    if (!session || (session.user as any)?.role !== 'admin') {
       router.push('/admin/login')
-    } else {
-      setAuthenticated(true)
-      setPosts(getBlogPosts())
     }
-  }, [router])
+  }, [session, status, router])
 
-  const handleSave = () => {
-    if (editing) {
-      updateBlogPost(editing, formData)
-    } else {
-      const newPost: BlogPost = {
-        id: Date.now().toString(),
-        title: formData.title || '',
-        excerpt: formData.excerpt || '',
-        content: formData.content || '',
-        date: formData.date || new Date().toISOString().split('T')[0],
-        author: formData.author,
-        tags: formData.tags || [],
+  // Fetch posts from API
+  useEffect(() => {
+    if (status === 'loading' || !session) return
+    
+    const fetchPosts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/blog-posts')
+        const result: ApiResponse<BlogPost[]> = await response.json()
+        
+        if (result.success && result.data) {
+          setPosts(result.data)
+        } else {
+          setError(result.error || 'Failed to load blog posts')
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load blog posts')
+      } finally {
+        setLoading(false)
       }
-      addBlogPost(newPost)
     }
-    setPosts(getBlogPosts())
-    setEditing(null)
-    setShowAddForm(false)
-    setFormData({})
+
+    fetchPosts()
+  }, [session, status])
+
+  const handleSave = async () => {
+    if (!formData.title || !formData.content) {
+      setError('Title and content are required')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError('')
+
+      const payload = {
+        title: formData.title,
+        excerpt: formData.excerpt || null,
+        content: formData.content,
+        tags: formData.tags || [],
+        published: formData.published || false,
+      }
+
+      let response: Response
+      if (editing) {
+        response = await fetch(`/api/blog-posts/${editing}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        response = await fetch('/api/blog-posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      const result: ApiResponse<BlogPost> = await response.json()
+
+      if (result.success) {
+        // Refresh the list
+        const refreshResponse = await fetch('/api/blog-posts')
+        const refreshResult: ApiResponse<BlogPost[]> = await refreshResponse.json()
+        if (refreshResult.success && refreshResult.data) {
+          setPosts(refreshResult.data)
+        }
+        setEditing(null)
+        setShowAddForm(false)
+        setFormData({})
+      } else {
+        setError(result.error || 'Failed to save blog post')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to save blog post')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleEdit = (post: BlogPost) => {
     setEditing(post.id)
-    setFormData(post)
+    setFormData({
+      title: post.title,
+      excerpt: post.excerpt,
+      content: post.content,
+      tags: post.tags,
+      published: post.published,
+    })
     setShowAddForm(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this blog post?')) {
-      deleteBlogPost(id)
-      setPosts(getBlogPosts())
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this blog post?')) return
+
+    try {
+      const response = await fetch(`/api/blog-posts/${id}`, {
+        method: 'DELETE',
+      })
+
+      const result: ApiResponse = await response.json()
+
+      if (result.success) {
+        // Refresh the list
+        const refreshResponse = await fetch('/api/blog-posts')
+        const refreshResult: ApiResponse<BlogPost[]> = await refreshResponse.json()
+        if (refreshResult.success && refreshResult.data) {
+          setPosts(refreshResult.data)
+        }
+      } else {
+        setError(result.error || 'Failed to delete blog post')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete blog post')
     }
   }
 
-  if (!authenticated) return null
+  if (status === 'loading' || !session) {
+    return (
+      <div className="min-h-screen bg-cream py-12 px-4 flex items-center justify-center">
+        <p className="text-charcoal">Loading...</p>
+      </div>
+    )
+  }
+
+  if ((session.user as any)?.role !== 'admin') {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-cream py-12 px-4">
@@ -116,25 +219,19 @@ export default function AdminBlog() {
                   className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">Date *</label>
+              <div>
+                <label className="flex items-center gap-2">
                   <input
-                    type="date"
-                    value={formData.date || ''}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                    type="checkbox"
+                    checked={formData.published || false}
+                    onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
+                    className="w-4 h-4 text-bronze border-soft-gray rounded focus:ring-bronze"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">Author</label>
-                  <input
-                    type="text"
-                    value={formData.author || ''}
-                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
-                  />
-                </div>
+                  <span className="text-sm font-medium text-charcoal">Published</span>
+                </label>
+                <p className="text-xs text-charcoal-light mt-1">
+                  Uncheck to save as draft (drafts are only visible to admins)
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-charcoal mb-2">Tags (comma-separated)</label>
@@ -146,20 +243,34 @@ export default function AdminBlog() {
                   placeholder="culture, history, philosophy"
                 />
               </div>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
               <div className="flex gap-4">
+                <ContentPreview
+                  title={formData.title || 'Untitled Post'}
+                  content={formData.content || ''}
+                  excerpt={formData.excerpt}
+                  type="blog"
+                />
                 <button
                   onClick={handleSave}
-                  className="px-6 py-2 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {saving ? 'Saving...' : formData.published ? 'Publish' : 'Save Draft'}
                 </button>
                 <button
                   onClick={() => {
                     setEditing(null)
                     setShowAddForm(false)
                     setFormData({})
+                    setError('')
                   }}
-                  className="px-6 py-2 bg-soft-gray text-charcoal rounded-lg hover:bg-charcoal hover:text-cream transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2 bg-soft-gray text-charcoal rounded-lg hover:bg-charcoal hover:text-cream transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -168,17 +279,30 @@ export default function AdminBlog() {
           </div>
         )}
 
-        <div className="space-y-4">
-          {posts.map((post) => (
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-charcoal-light">Loading blog posts...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {posts.length === 0 ? (
+              <div className="bg-white p-8 rounded-lg shadow-sm border border-soft-gray text-center">
+                <p className="text-charcoal-light">No blog posts found. Create your first post!</p>
+              </div>
+            ) : (
+              posts.map((post) => (
             <div key={post.id} className="bg-white p-6 rounded-lg shadow-sm border border-soft-gray">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold font-serif mb-2 text-charcoal">{post.title}</h3>
                   <p className="text-charcoal-light mb-2">{post.excerpt}</p>
                   <div className="text-sm text-charcoal-light">
-                    <span>{new Date(post.date).toLocaleDateString()}</span>
-                    {post.author && <span className="mx-2">•</span>}
-                    {post.author && <span>{post.author}</span>}
+                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    {post.published ? (
+                      <span className="inline-block text-xs px-2 py-1 bg-green-100 text-green-800 rounded ml-2">Published</span>
+                    ) : (
+                      <span className="inline-block text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded ml-2">Draft</span>
+                    )}
                   </div>
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -205,9 +329,16 @@ export default function AdminBlog() {
                   </button>
                 </div>
               </div>
+              {editing === post.id && (
+                <div className="mt-6 pt-6 border-t border-soft-gray">
+                  <VersionHistory targetType="blog" targetId={post.id} />
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

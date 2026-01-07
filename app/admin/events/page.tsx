@@ -2,61 +2,165 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getEvents, addEvent, updateEvent, deleteEvent, type Event } from '@/lib/adminData'
+import { useSession } from 'next-auth/react'
+import { Event } from '@/lib/db-types'
+
+interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
 
 export default function AdminEvents() {
-  const [authenticated, setAuthenticated] = useState(false)
+  const { data: session, status } = useSession()
   const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState<Partial<Event>>({})
+  const [formData, setFormData] = useState<Partial<Event & { time?: string }>>({})
   const router = useRouter()
 
+  // Check authentication
   useEffect(() => {
-    const isAuth = localStorage.getItem('adminAuthenticated') === 'true'
-    if (!isAuth) {
+    if (status === 'loading') return
+    if (!session || (session.user as any)?.role !== 'admin') {
       router.push('/admin/login')
-    } else {
-      setAuthenticated(true)
-      setEvents(getEvents())
     }
-  }, [router])
+  }, [session, status, router])
 
-  const handleSave = () => {
-    if (editing) {
-      updateEvent(editing, formData)
-    } else {
-      const newEvent: Event = {
-        id: Date.now().toString(),
-        title: formData.title || '',
-        date: formData.date || '',
-        time: formData.time,
-        location: formData.location,
-        description: formData.description || '',
-        type: formData.type || 'other',
+  // Fetch events from API
+  useEffect(() => {
+    if (status === 'loading' || !session) return
+    
+    const fetchEvents = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/events')
+        const result: ApiResponse<Event[]> = await response.json()
+        
+        if (result.success && result.data) {
+          setEvents(result.data)
+        } else {
+          setError(result.error || 'Failed to load events')
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load events')
+      } finally {
+        setLoading(false)
       }
-      addEvent(newEvent)
     }
-    setEvents(getEvents())
-    setEditing(null)
-    setShowAddForm(false)
-    setFormData({})
+
+    fetchEvents()
+  }, [session, status])
+
+  const handleSave = async () => {
+    if (!formData.title || !formData.event_date) {
+      setError('Title and event date are required')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError('')
+
+      const payload = {
+        title: formData.title,
+        description: formData.description || null,
+        event_date: formData.event_date,
+        end_date: formData.end_date || null,
+        location: formData.location || null,
+        event_type: formData.event_type || 'other',
+      }
+
+      let response: Response
+      if (editing) {
+        response = await fetch(`/api/events/${editing}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        response = await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      const result: ApiResponse<Event> = await response.json()
+
+      if (result.success) {
+        // Refresh the list
+        const refreshResponse = await fetch('/api/events')
+        const refreshResult: ApiResponse<Event[]> = await refreshResponse.json()
+        if (refreshResult.success && refreshResult.data) {
+          setEvents(refreshResult.data)
+        }
+        setEditing(null)
+        setShowAddForm(false)
+        setFormData({})
+      } else {
+        setError(result.error || 'Failed to save event')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to save event')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleEdit = (event: Event) => {
     setEditing(event.id)
-    setFormData(event)
+    setFormData({
+      title: event.title,
+      description: event.description,
+      event_date: event.event_date,
+      end_date: event.end_date,
+      location: event.location,
+      event_type: event.event_type,
+    })
     setShowAddForm(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this event?')) {
-      deleteEvent(id)
-      setEvents(getEvents())
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this event?')) return
+
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'DELETE',
+      })
+
+      const result: ApiResponse = await response.json()
+
+      if (result.success) {
+        // Refresh the list
+        const refreshResponse = await fetch('/api/events')
+        const refreshResult: ApiResponse<Event[]> = await refreshResponse.json()
+        if (refreshResult.success && refreshResult.data) {
+          setEvents(refreshResult.data)
+        }
+      } else {
+        setError(result.error || 'Failed to delete event')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete event')
     }
   }
 
-  if (!authenticated) return null
+  if (status === 'loading' || !session) {
+    return (
+      <div className="min-h-screen bg-cream py-12 px-4 flex items-center justify-center">
+        <p className="text-charcoal">Loading...</p>
+      </div>
+    )
+  }
+
+  if ((session.user as any)?.role !== 'admin') {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-cream py-12 px-4">
@@ -100,23 +204,21 @@ export default function AdminEvents() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">Date *</label>
+                  <label className="block text-sm font-medium text-charcoal mb-2">Event Date *</label>
                   <input
-                    type="text"
-                    value={formData.date || ''}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    type="datetime-local"
+                    value={formData.event_date ? new Date(formData.event_date).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
-                    placeholder="February 15, 2024"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">Time</label>
+                  <label className="block text-sm font-medium text-charcoal mb-2">End Date (optional)</label>
                   <input
-                    type="text"
-                    value={formData.time || ''}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    type="datetime-local"
+                    value={formData.end_date ? new Date(formData.end_date).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value || undefined })}
                     className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
-                    placeholder="6:00 PM - 7:30 PM"
                   />
                 </div>
               </div>
@@ -132,8 +234,8 @@ export default function AdminEvents() {
               <div>
                 <label className="block text-sm font-medium text-charcoal mb-2">Type</label>
                 <select
-                  value={formData.type || 'other'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as Event['type'] })}
+                  value={formData.event_type || 'other'}
+                  onChange={(e) => setFormData({ ...formData, event_type: e.target.value as Event['event_type'] })}
                   className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
                 >
                   <option value="discussion">Discussion</option>
@@ -151,20 +253,28 @@ export default function AdminEvents() {
                   className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
                 />
               </div>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
               <div className="flex gap-4">
                 <button
                   onClick={handleSave}
-                  className="px-6 py-2 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={() => {
                     setEditing(null)
                     setShowAddForm(false)
                     setFormData({})
+                    setError('')
                   }}
-                  className="px-6 py-2 bg-soft-gray text-charcoal rounded-lg hover:bg-charcoal hover:text-cream transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2 bg-soft-gray text-charcoal rounded-lg hover:bg-charcoal hover:text-cream transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -173,18 +283,28 @@ export default function AdminEvents() {
           </div>
         )}
 
-        <div className="space-y-4">
-          {events.map((event) => (
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-charcoal-light">Loading events...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {events.length === 0 ? (
+              <div className="bg-white p-8 rounded-lg shadow-sm border border-soft-gray text-center">
+                <p className="text-charcoal-light">No events found. Create your first event!</p>
+              </div>
+            ) : (
+              events.map((event) => (
             <div key={event.id} className="bg-white p-6 rounded-lg shadow-sm border border-soft-gray">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold font-serif mb-2 text-charcoal">{event.title}</h3>
                   <p className="text-charcoal-light mb-2">{event.description}</p>
                   <div className="text-sm text-charcoal-light space-y-1">
-                    <p><strong>Date:</strong> {event.date}</p>
-                    {event.time && <p><strong>Time:</strong> {event.time}</p>}
+                    <p><strong>Date:</strong> {new Date(event.event_date).toLocaleString()}</p>
+                    {event.end_date && <p><strong>End Date:</strong> {new Date(event.end_date).toLocaleString()}</p>}
                     {event.location && <p><strong>Location:</strong> {event.location}</p>}
-                    {event.type && <p><strong>Type:</strong> {event.type}</p>}
+                    {event.event_type && <p><strong>Type:</strong> {event.event_type}</p>}
                   </div>
                 </div>
                 <div className="flex gap-2 ml-4">
@@ -203,8 +323,10 @@ export default function AdminEvents() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -13,12 +13,12 @@ export default function BlogCard({ id, title, excerpt, date, author, tags }: Blo
   return (
     <Link
       href={`/blog/${id}`}
-      className="block bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow border border-soft-gray hover:border-bronze group"
+      className="block bg-card-bg p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow border border-border-subtle hover:border-accent-primary group"
     >
-      <h3 className="text-2xl font-bold font-serif mb-3 text-charcoal group-hover:text-bronze transition-colors">
+      <h3 className="text-2xl font-bold font-serif mb-3 text-text-primary group-hover:text-accent-primary transition-colors">
         {title}
       </h3>
-      <div className="text-sm text-charcoal-light mb-3">
+      <div className="text-sm text-text-metadata mb-3">
         <span>{new Date(date).toLocaleDateString('en-US', { 
           year: 'numeric', 
           month: 'long', 
@@ -27,7 +27,7 @@ export default function BlogCard({ id, title, excerpt, date, author, tags }: Blo
         {author && <span className="mx-2">•</span>}
         {author && <span>{author}</span>}
       </div>
-      <p className="text-charcoal-light mb-4 line-clamp-3">
+      <p className="text-text-primary mb-4 line-clamp-3">
         {excerpt}
       </p>
       {tags && tags.length > 0 && (
@@ -35,7 +35,7 @@ export default function BlogCard({ id, title, excerpt, date, author, tags }: Blo
           {tags.map((tag) => (
             <span
               key={tag}
-              className="text-xs px-2 py-1 bg-soft-gray text-charcoal-light rounded"
+              className="text-xs px-2 py-1 bg-card-bg-muted border border-border-subtle text-text-metadata rounded"
             >
               {tag}
             </span>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 const faqs = [
   {
@@ -34,6 +35,7 @@ const faqs = [
 ]
 
 export default function GetInvolved() {
+  const { data: session } = useSession()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -44,15 +46,83 @@ export default function GetInvolved() {
     mailingList: false,
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [userData, setUserData] = useState<any>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (session?.user) {
+      // Fetch user data to auto-fill form
+      fetch('/api/users/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setUserData(data.data)
+            setFormData(prev => ({
+              ...prev,
+              name: data.data.display_name || data.data.username || '',
+              email: data.data.email || '',
+            }))
+          }
+        })
+        .catch(err => console.error('Failed to fetch user data:', err))
+    }
+  }, [session])
+
+  interface ApiResponse<T = any> {
+    success: boolean
+    data?: T
+    error?: string
+    message?: string
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In production, this would submit to a backend API
-    console.log('Form submitted:', formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
+    setError('')
+    setLoading(true)
+
+    try {
+      // Submit contact form
+      const contactResponse = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            subject: `Get Involved: ${formData.involvementType}`,
+            message: `UT EID: ${formData.utEid || 'N/A'}\nInterests: ${formData.interests || 'N/A'}\n\nMessage:\n${formData.message || 'N/A'}`,
+            category: 'get_involved', // Will work after running migration
+          }),
+      })
+
+      const contactResult: ApiResponse = await contactResponse.json()
+
+      if (!contactResult.success) {
+        setError(contactResult.error || 'Failed to submit form. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Add to mailing list if checked
+      if (formData.mailingList) {
+        const mailingListResponse = await fetch('/api/mailing-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            source: 'get_involved',
+          }),
+        })
+
+        const mailingListResult: ApiResponse = await mailingListResponse.json()
+        // Don't fail if mailing list fails, just log it
+        if (!mailingListResult.success) {
+          console.warn('Mailing list subscription failed:', mailingListResult.error)
+        }
+      }
+
+      setSubmitted(true)
       setFormData({
         name: '',
         email: '',
@@ -62,41 +132,56 @@ export default function GetInvolved() {
         involvementType: 'volunteer',
         mailingList: false,
       })
-    }, 3000)
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 5000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit form. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-cream py-12 px-4">
+    <div className="min-h-screen bg-bg-primary py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-charcoal">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-text-primary">
             Get Involved
           </h1>
-          <p className="text-lg text-charcoal-light max-w-2xl mx-auto">
+          <p className="text-lg text-text-secondary max-w-2xl mx-auto">
             Join our community of thinkers exploring how collective language and inherited wisdom 
             can illuminate a strong path forward. We recruit year-round—no application required!
           </p>
         </div>
 
         {/* Interest Form */}
-        <section className="bg-white p-8 md:p-12 rounded-lg shadow-sm border border-soft-gray mb-12">
-          <h2 className="text-3xl font-bold font-serif mb-6 text-charcoal">
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
             Join Us
           </h2>
-          <p className="text-charcoal-light mb-8">
+          <p className="text-text-secondary mb-8">
             Interested in becoming a member, volunteering, or learning more? Fill out the form below, 
             and we'll get in touch with you soon.
           </p>
 
           {submitted ? (
-            <div className="bg-green-50 border border-green-200 text-green-800 p-6 rounded-lg">
+            <div className="bg-success-bg border border-success-text/30 text-success-text p-6 rounded-lg">
               <p className="font-semibold">Thank you for your interest!</p>
               <p>We'll be in touch soon.</p>
+              {formData.mailingList && (
+                <p className="mt-2 text-sm">You've been added to our mailing list.</p>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-error-bg border border-error-text/30 text-error-text px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-text-primary mb-2">
                   Name *
                 </label>
                 <input
@@ -105,12 +190,12 @@ export default function GetInvolved() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
                   Email *
                 </label>
                 <input
@@ -119,12 +204,12 @@ export default function GetInvolved() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="utEid" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="utEid" className="block text-sm font-medium text-text-primary mb-2">
                   UT EID (if applicable)
                 </label>
                 <input
@@ -132,19 +217,19 @@ export default function GetInvolved() {
                   id="utEid"
                   value={formData.utEid}
                   onChange={(e) => setFormData({ ...formData, utEid: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="involvementType" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="involvementType" className="block text-sm font-medium text-text-primary mb-2">
                   I'm interested in:
                 </label>
                 <select
                   id="involvementType"
                   value={formData.involvementType}
                   onChange={(e) => setFormData({ ...formData, involvementType: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 >
                   <option value="volunteer">Volunteering</option>
                   <option value="member">Becoming a Member</option>
@@ -154,7 +239,7 @@ export default function GetInvolved() {
               </div>
 
               <div>
-                <label htmlFor="interests" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="interests" className="block text-sm font-medium text-text-primary mb-2">
                   Areas of Interest
                 </label>
                 <textarea
@@ -163,12 +248,12 @@ export default function GetInvolved() {
                   value={formData.interests}
                   onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
                   placeholder="e.g., Archive research, event planning, creative writing..."
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-charcoal mb-2">
+                <label htmlFor="message" className="block text-sm font-medium text-text-primary mb-2">
                   Message (optional)
                 </label>
                 <textarea
@@ -176,7 +261,7 @@ export default function GetInvolved() {
                   rows={4}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+                  className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
                 />
               </div>
 
@@ -186,54 +271,55 @@ export default function GetInvolved() {
                   id="mailingList"
                   checked={formData.mailingList}
                   onChange={(e) => setFormData({ ...formData, mailingList: e.target.checked })}
-                  className="w-4 h-4 text-bronze border-soft-gray rounded focus:ring-bronze"
+                  className="w-4 h-4 text-accent-primary border-border-medium rounded focus:ring-accent-primary"
                 />
-                <label htmlFor="mailingList" className="ml-2 text-sm text-charcoal-light">
+                <label htmlFor="mailingList" className="ml-2 text-sm text-text-secondary">
                   Join our mailing list for updates and event announcements
                 </label>
               </div>
 
               <button
                 type="submit"
-                className="w-full md:w-auto px-8 py-3 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors font-medium"
+                disabled={loading}
+                className="w-full md:w-auto px-8 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Submit
+                {loading ? 'Submitting...' : 'Submit'}
               </button>
             </form>
           )}
         </section>
 
         {/* Donation Section */}
-        <section className="bg-white p-8 md:p-12 rounded-lg shadow-sm border border-soft-gray mb-12">
-          <h2 className="text-3xl font-bold font-serif mb-6 text-charcoal">
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
             Support Our Mission
           </h2>
-          <p className="text-charcoal-light mb-6">
+          <p className="text-text-secondary mb-6">
             While membership is free, donations help us expand our programs, maintain our archive, 
             and host events. Your support directly enables us to preserve linguistic heritage and 
             foster thoughtful dialogue.
           </p>
           <a
             href="/contact"
-            className="inline-block px-6 py-3 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors font-medium"
+            className="inline-block px-6 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium"
           >
             Contact Us About Donations
           </a>
         </section>
 
         {/* Partner/Collaborate */}
-        <section className="bg-white p-8 md:p-12 rounded-lg shadow-sm border border-soft-gray mb-12">
-          <h2 className="text-3xl font-bold font-serif mb-6 text-charcoal">
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
             Partner & Collaborate
           </h2>
-          <p className="text-charcoal-light mb-6">
+          <p className="text-text-secondary mb-6">
             We're always interested in partnering with other organizations, academic departments, 
             cultural institutions, and community groups. Whether you're interested in co-hosting 
             events, sharing resources, or collaborating on research, we'd love to hear from you.
           </p>
           <a
             href="/contact"
-            className="inline-block px-6 py-3 bg-soft-gray text-charcoal rounded-lg hover:bg-bronze hover:text-cream transition-colors font-medium"
+            className="inline-block px-6 py-3 bg-card-bg-muted text-text-primary rounded-lg hover:bg-accent-primary hover:text-text-inverse transition-colors font-medium"
           >
             Reach Out
           </a>
@@ -241,22 +327,22 @@ export default function GetInvolved() {
 
         {/* FAQ */}
         <section>
-          <h2 className="text-3xl font-bold font-serif mb-8 text-center text-charcoal">
+          <h2 className="text-3xl font-bold font-serif mb-8 text-center text-text-primary">
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg shadow-sm border border-soft-gray overflow-hidden"
+                className="bg-card-bg rounded-lg shadow-sm border border-border-medium overflow-hidden"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-soft-gray transition-colors"
+                  className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-card-bg-muted transition-colors"
                 >
-                  <h3 className="font-semibold text-charcoal">{faq.question}</h3>
+                  <h3 className="font-semibold text-text-primary">{faq.question}</h3>
                   <svg
-                    className={`w-5 h-5 text-bronze transition-transform ${
+                    className={`w-5 h-5 text-accent-primary transition-transform ${
                       openFaq === index ? 'transform rotate-180' : ''
                     }`}
                     fill="none"
@@ -267,7 +353,7 @@ export default function GetInvolved() {
                   </svg>
                 </button>
                 {openFaq === index && (
-                  <div className="px-6 py-4 text-charcoal-light border-t border-soft-gray">
+                  <div className="px-6 py-4 text-text-secondary border-t border-border-medium">
                     {faq.answer}
                   </div>
                 )}

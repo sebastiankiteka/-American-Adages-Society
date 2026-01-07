@@ -34,6 +34,7 @@ export interface Adage {
   tags?: string[]
   featured: boolean
   featured_until?: string
+  published_at?: string
   views_count: number
   created_at: string
   updated_at: string
@@ -88,6 +89,8 @@ export interface AdageTimeline {
   time_period_start: string
   time_period_end?: string
   popularity_level: 'rare' | 'uncommon' | 'common' | 'very_common' | 'ubiquitous'
+  primary_location?: string
+  geographic_changes?: string
   notes?: string
   sources?: string[]
   created_at: string
@@ -181,7 +184,7 @@ export interface ForumReply {
 
 export interface Comment {
   id: string
-  target_type: 'blog' | 'adage' | 'forum'
+  target_type: 'blog' | 'adage' | 'forum' | 'user'
   target_id: string
   parent_id?: string
   user_id?: string

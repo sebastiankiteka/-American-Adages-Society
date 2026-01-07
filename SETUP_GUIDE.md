@@ -65,7 +65,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
-EMAIL_FROM=noreply@americanadagessociety.org
+EMAIL_FROM=sebastiankiteka@gmail.com
 EMAIL_TO=sebastiankiteka@utexas.edu
 ```
 

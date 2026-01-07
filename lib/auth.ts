@@ -4,7 +4,14 @@ import Credentials from 'next-auth/providers/credentials'
 import { supabase } from './supabase'
 import bcrypt from 'bcryptjs'
 
+// Ensure we have a secret for NextAuth
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+if (!authSecret) {
+  console.warn('⚠️  AUTH_SECRET or NEXTAUTH_SECRET is not set. Authentication may not work properly.')
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: authSecret,
   providers: [
     Credentials({
       name: 'Credentials',

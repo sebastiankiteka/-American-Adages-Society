@@ -1,6 +1,6 @@
 // API route for individual comment operations
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, requireModerator, logActivity, ApiResponse } from '@/lib/api-helpers'
 
 // PUT /api/comments/[id] - Update comment (author or moderator)
@@ -20,8 +20,8 @@ export async function PUT(
     const { id } = params
     const body = await request.json()
 
-    // Check if user is author or moderator
-    const { data: comment } = await supabase
+    // Check if user is author or moderator - use supabaseAdmin to bypass RLS
+    const { data: comment } = await supabaseAdmin
       .from('comments')
       .select('user_id, is_commendation')
       .eq('id', id)
@@ -50,7 +50,8 @@ export async function PUT(
       await requireModerator()
     }
 
-    const { data, error } = await supabase
+    // Update comment - use supabaseAdmin to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('comments')
       .update(body)
       .eq('id', id)
@@ -95,8 +96,8 @@ export async function DELETE(
 
     const { id } = params
 
-    // Check if user is author or moderator
-    const { data: comment } = await supabase
+    // Check if user is author or moderator - use supabaseAdmin to bypass RLS
+    const { data: comment } = await supabaseAdmin
       .from('comments')
       .select('user_id, is_commendation')
       .eq('id', id)
@@ -116,7 +117,8 @@ export async function DELETE(
       await requireModerator()
     }
 
-    const { error } = await supabase
+    // Delete comment - use supabaseAdmin to bypass RLS
+    const { error } = await supabaseAdmin
       .from('comments')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)

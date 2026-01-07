@@ -2,25 +2,30 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { getLeadership, saveLeadership, addLeadershipMember, updateLeadershipMember, deleteLeadershipMember, type LeadershipMember } from '@/lib/adminData'
 
 export default function AdminLeadership() {
-  const [authenticated, setAuthenticated] = useState(false)
+  const { data: session, status } = useSession()
   const [leadership, setLeadership] = useState<LeadershipMember[]>([])
   const [editing, setEditing] = useState<number | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState<Partial<LeadershipMember>>({})
   const router = useRouter()
 
+  // Check authentication
   useEffect(() => {
-    const isAuth = localStorage.getItem('adminAuthenticated') === 'true'
-    if (!isAuth) {
+    if (status === 'loading') return
+    if (!session || (session.user as any)?.role !== 'admin') {
       router.push('/admin/login')
-    } else {
-      setAuthenticated(true)
-      setLeadership(getLeadership())
     }
-  }, [router])
+  }, [session, status, router])
+
+  // Load leadership data
+  useEffect(() => {
+    if (status === 'loading' || !session) return
+    setLeadership(getLeadership())
+  }, [session, status])
 
   const handleSave = () => {
     if (editing !== null) {
@@ -53,7 +58,17 @@ export default function AdminLeadership() {
     }
   }
 
-  if (!authenticated) return null
+  if (status === 'loading' || !session) {
+    return (
+      <div className="min-h-screen bg-cream py-12 px-4 flex items-center justify-center">
+        <p className="text-charcoal">Loading...</p>
+      </div>
+    )
+  }
+
+  if ((session.user as any)?.role !== 'admin') {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-cream py-12 px-4">

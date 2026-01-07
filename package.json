@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup-env": "node scripts/setup-env.js",
+    "create-admin": "node scripts/create-admin-user.js",
+    "check-schema": "node scripts/run-schema.js",
+    "test-db": "node scripts/test-database.js",
+    "add-sample-data": "node scripts/add-sample-data-direct.js",
+    "update-adages": "node scripts/update-adages-with-first-known-use.js",
+    "add-missing-adages": "node scripts/add-missing-adages.js",
+    "clear-cache": "powershell -ExecutionPolicy Bypass -File scripts/clear-cache.ps1"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -16,7 +24,8 @@
     "next-auth": "^5.0.0-beta.4",
     "bcryptjs": "^2.4.3",
     "nodemailer": "^6.9.7",
-    "date-fns": "^3.0.0"
+    "date-fns": "^3.0.0",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
