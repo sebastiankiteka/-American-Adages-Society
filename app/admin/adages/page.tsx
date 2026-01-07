@@ -21,7 +21,7 @@ interface ApiResponse<T = any> {
   message?: string
 }
 
-export default function AdminAdages() {
+export default function AdminAdagesPage() {
   const { data: session, status } = useSession()
   const [adages, setAdages] = useState<Adage[]>([])
   const [loading, setLoading] = useState(true)
@@ -527,35 +527,33 @@ export default function AdminAdages() {
           <div className="text-center py-12">
             <p className="text-text-secondary">Loading adages...</p>
           </div>
+        ) : adages.length === 0 ? (
+          <div className="bg-card-bg p-8 rounded-lg shadow-sm border border-border-medium text-center">
+            <p className="text-text-secondary">No adages found. Create your first adage!</p>
+          </div>
         ) : (
           <div className="space-y-4">
-            {adages.length === 0 ? (
-              <div className="bg-card-bg p-8 rounded-lg shadow-sm border border-border-medium text-center">
-                <p className="text-text-secondary">No adages found. Create your first adage!</p>
-              </div>
-            ) : (
-              <div className="mb-4">
-                <button
-                  onClick={selectAll}
-                  className="text-sm text-accent-primary hover:underline"
-                >
-                  {selectedAdages.size === adages.length ? 'Deselect All' : 'Select All'}
-                </button>
-              </div>
-            )}
-            {!loading && adages.map((adage) => {
-                const isExpanded = expandedAdageId === adage.id
-                const isSelected = selectedAdages.has(adage.id)
-                return (
-                  <div key={adage.id} className={`bg-card-bg p-6 rounded-lg shadow-sm border ${isSelected ? 'border-accent-primary' : 'border-border-medium'}`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start gap-3 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectAdage(adage.id)}
-                          className="mt-1 w-4 h-4 text-accent-primary border-border-medium rounded focus:ring-accent-primary"
-                        />
+            <div className="mb-4">
+              <button
+                onClick={selectAll}
+                className="text-sm text-accent-primary hover:underline"
+              >
+                {selectedAdages.size === adages.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            {adages.map((adage) => {
+              const isExpanded = expandedAdageId === adage.id
+              const isSelected = selectedAdages.has(adage.id)
+              return (
+                <div key={adage.id} className={`bg-card-bg p-6 rounded-lg shadow-sm border ${isSelected ? 'border-accent-primary' : 'border-border-medium'}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectAdage(adage.id)}
+                        className="mt-1 w-4 h-4 text-accent-primary border-border-medium rounded focus:ring-accent-primary"
+                      />
                       <div className="flex-1">
                         <h3 className="text-2xl font-bold font-serif mb-2 text-text-primary">
                           "{adage.adage}"
@@ -582,10 +580,10 @@ export default function AdminAdages() {
                           <button
                             onClick={async () => {
                               const reason = prompt('Why is this adage being featured? (Optional reason)')
-                              if (reason === null) return // User cancelled
+                              if (reason === null) return
                               
                               const featuredUntil = prompt('Featured until (YYYY-MM-DD format, or leave empty for permanent):')
-                              if (featuredUntil === null) return // User cancelled
+                              if (featuredUntil === null) return
                               
                               try {
                                 const response = await fetch(`/api/adages/${adage.id}/set-featured`, {
@@ -598,7 +596,6 @@ export default function AdminAdages() {
                                 })
                                 const result: ApiResponse = await response.json()
                                 if (result.success) {
-                                  // Refresh the list
                                   const refreshResponse = await fetch('/api/adages')
                                   const refreshResult: ApiResponse<Adage[]> = await refreshResponse.json()
                                   if (refreshResult.success && refreshResult.data) {
@@ -611,7 +608,7 @@ export default function AdminAdages() {
                                 alert(err.message || 'Failed to set featured adage')
                               }
                             }}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            className="px-4 py-2 bg-success-text text-text-inverse rounded-lg hover:bg-success-text/90 transition-colors text-sm"
                           >
                             Set as Featured
                           </button>
@@ -634,8 +631,8 @@ export default function AdminAdages() {
                           }}
                           className={`px-4 py-2 rounded-lg transition-colors text-sm ${
                             isExpanded
-                              ? 'bg-blue-700 text-white'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                              ? 'bg-info-text text-text-inverse'
+                              : 'bg-info-text text-text-inverse hover:bg-info-text/90'
                           }`}
                         >
                           {isExpanded ? 'Hide Details' : 'Manage Details'}
@@ -651,9 +648,9 @@ export default function AdminAdages() {
                       </>
                     )}
                   </div>
-                )
-              })
-            )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

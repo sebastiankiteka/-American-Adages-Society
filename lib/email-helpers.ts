@@ -34,24 +34,6 @@ export async function sendCommentNotificationEmail(
     const inboxOnly = ownerPrefs?.email_inbox_only === true
     const wantsEmail = ownerPrefs?.email_comment_notifications !== false
 
-    // If inbox-only mode, create notification but don't send email
-    if (inboxOnly) {
-      await createNotification({
-        user_id: contentOwnerId,
-        type: 'general',
-        title: `New Comment from ${commenterName}`,
-        message: `${commenterName} commented on ${targetTitle}: "${commentContent.substring(0, 100)}${commentContent.length > 100 ? '...' : ''}"`,
-        related_id: commentId,
-        related_type: 'comment',
-      })
-      return true
-    }
-
-    // If user doesn't want email notifications, don't send
-    if (!wantsEmail) {
-      return false
-    }
-
     // Get comment author info
     const { data: commenter } = await supabase
       .from('users')
@@ -97,6 +79,25 @@ export async function sendCommentNotificationEmail(
     }
 
     const commenterName = commenter?.display_name || commenter?.username || 'Someone'
+
+    // If inbox-only mode, create notification but don't send email
+    if (inboxOnly) {
+      await createNotification({
+        user_id: contentOwnerId,
+        type: 'general',
+        title: `New Comment from ${commenterName}`,
+        message: `${commenterName} commented on ${targetTitle}: "${commentContent.substring(0, 100)}${commentContent.length > 100 ? '...' : ''}"`,
+        related_id: commentId,
+        related_type: 'comment',
+      })
+      return true
+    }
+
+    // If user doesn't want email notifications, don't send
+    if (!wantsEmail) {
+      return false
+    }
+
     const subject = `${commenterName} commented on ${targetTitle}`
     const htmlBody = `
       <h2>New Comment</h2>
@@ -221,7 +222,7 @@ export async function sendEventNotificationEmail(eventTitle: string, eventDescri
             type: 'general',
             title: `Upcoming Event: ${eventTitle}`,
             message: eventDescription.substring(0, 200) + (eventDescription.length > 200 ? '...' : ''),
-            related_id: eventLink || null,
+            related_id: eventLink || undefined,
             related_type: 'event',
           })
         } else {
@@ -286,7 +287,7 @@ export async function sendSiteUpdateEmail(updateTitle: string, updateDescription
             type: 'system',
             title: `Site Update: ${updateTitle}`,
             message: updateDescription.substring(0, 200) + (updateDescription.length > 200 ? '...' : ''),
-            related_id: updateLink || null,
+            related_id: updateLink || undefined,
             related_type: 'site_update',
           })
         } else {

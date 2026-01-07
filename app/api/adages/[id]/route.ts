@@ -103,9 +103,10 @@ export async function GET(
     return response
   } catch (error: any) {
     const user = await getCurrentUser()
+    const { id } = params
     errorLogger.logError(error, {
       userId: user?.id,
-      url: `/api/adages/${params.id}`,
+      url: `/api/adages/${id}`,
       action: 'GET',
     })
     return NextResponse.json<ApiResponse>({
@@ -154,6 +155,7 @@ export async function PUT(
       message: 'Adage updated successfully',
     })
   } catch (error: any) {
+    const { id } = params
     errorLogger.logError(error, {
       userId: (await requireAdmin()).id,
       url: `/api/adages/${id}`,

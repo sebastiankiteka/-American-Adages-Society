@@ -20,29 +20,8 @@ function generateICalLink(event: Event) {
       return '#'
     }
 
-    // Parse time if available
     let startDate = new Date(eventDate)
     let endDate = event.end_date ? new Date(event.end_date) : new Date(eventDate.getTime() + 60 * 60 * 1000)
-
-    if (event.time) {
-      const timeParts = event.time.split(' - ')
-      if (timeParts[0]) {
-        const [time, period] = timeParts[0].trim().split(' ')
-        const [hours, minutes] = time.split(':').map(Number)
-        let hour24 = hours
-        if (period?.toLowerCase() === 'pm' && hours !== 12) hour24 += 12
-        if (period?.toLowerCase() === 'am' && hours === 12) hour24 = 0
-        startDate.setHours(hour24, minutes || 0, 0, 0)
-      }
-      if (timeParts[1]) {
-        const [time, period] = timeParts[1].trim().split(' ')
-        const [hours, minutes] = time.split(':').map(Number)
-        let hour24 = hours
-        if (period?.toLowerCase() === 'pm' && hours !== 12) hour24 += 12
-        if (period?.toLowerCase() === 'am' && hours === 12) hour24 = 0
-        endDate.setHours(hour24, minutes || 0, 0, 0)
-      }
-    }
 
     const formatDate = (date: Date) => {
       if (!isValid(date)) {
@@ -176,7 +155,6 @@ export default function EventDetail() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span className="font-medium">{formattedDate}</span>
-                {event.time && <span>• {event.time}</span>}
               </div>
               {event.location && (
                 <div className="flex items-center gap-2">

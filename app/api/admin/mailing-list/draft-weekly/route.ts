@@ -32,12 +32,13 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle()
 
-      if (recentFeatured && recentFeatured.adages) {
+      if (recentFeatured && recentFeatured.adages && recentFeatured.adages.length > 0) {
+        const adage = recentFeatured.adages[0]
         featuredAdage = {
-          id: recentFeatured.adages.id,
-          adage: recentFeatured.adages.adage,
-          definition: recentFeatured.adages.definition,
-          origin: recentFeatured.adages.origin,
+          id: adage.id,
+          adage: adage.adage,
+          definition: adage.definition,
+          origin: adage.origin,
           featured_reason: recentFeatured.reason,
           featured_from: recentFeatured.featured_from,
           featured_until: recentFeatured.featured_until,

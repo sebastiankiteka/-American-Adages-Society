@@ -42,13 +42,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the challenge/report associated with this notification
-    // First, try to extract challenge ID from the notification message (if stored there)
     let challengeId: string | null = null
-    if (notification.message) {
-      const challengeIdMatch = notification.message.match(/Challenge ID: ([a-f0-9-]+)/i)
-      if (challengeIdMatch) {
-        challengeId = challengeIdMatch[1]
-      }
+
+    if (notification.related_type === 'challenge' && notification.related_id) {
+      challengeId = notification.related_id
     }
 
     let challenge: any = null

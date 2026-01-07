@@ -147,11 +147,9 @@ export default function WeeklyAdage() {
                 Featured: {adage.featured_reason}
               </p>
             )}
-            {(adage.featured_from || adage.featured_until) && (
+            {adage.featured_until && (
               <p className="text-xs text-text-secondary text-center mb-4 px-4">
-                {adage.featured_from && format(new Date(adage.featured_from), 'MMM d, yyyy')}
-                {adage.featured_from && adage.featured_until && ' - '}
-                {adage.featured_until && format(new Date(adage.featured_until), 'MMM d, yyyy')}
+                Featured until {format(new Date(adage.featured_until), 'MMM d, yyyy')}
               </p>
             )}
 

@@ -823,6 +823,8 @@ export default function AdageDetailsManager({ adageId, adages }: AdageDetailsMan
                         time_period_start: entry.time_period_start,
                         time_period_end: entry.time_period_end || '',
                         popularity_level: entry.popularity_level,
+                        primary_location: entry.primary_location || '',
+                        geographic_changes: entry.geographic_changes || '',
                         notes: entry.notes || '',
                         sources: entry.sources ? entry.sources.join(', ') : '',
                       })

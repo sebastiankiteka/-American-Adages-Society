@@ -164,7 +164,7 @@ export default function CommentsSection({ targetType, targetId }: CommentsSectio
               return {
                 ...comment,
                 score: newScore,
-                user_vote: newUserVote === 0 ? null : newUserVote,
+                user_vote: newUserVote === 0 ? undefined : newUserVote,
               }
             }
             return comment

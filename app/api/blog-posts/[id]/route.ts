@@ -157,8 +157,8 @@ export async function PUT(
     })
   } catch (error: any) {
     errorLogger.logError(error, {
-      userId: user.id,
-      url: `/api/blog-posts/${id}`,
+      userId: (await requireAdmin()).id,
+      url: `/api/blog-posts/${params.id}`,
       action: 'PUT',
     })
     return NextResponse.json<ApiResponse>({

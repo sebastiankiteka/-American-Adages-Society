@@ -29,16 +29,17 @@ export default function AdminMailingList() {
   const [weeklyEmailNotifications, setWeeklyEmailNotifications] = useState(0)
   const [notificationRead, setNotificationRead] = useState(false)
   const [weeklyNotifications, setWeeklyNotifications] = useState<any[]>([])
+  const [userSubscriberCount, setUserSubscriberCount] = useState<number | null>(null)
 
   useEffect(() => {
-    if (status === 'loading') return
+    if (!session) return
     if (!session || (session.user as any)?.role !== 'admin') {
       router.push('/admin/login')
     }
   }, [session, status, router])
 
   useEffect(() => {
-    if (status === 'loading' || !session) return
+    if (!session) return
 
     const fetchMailingList = async () => {
       try {
@@ -65,6 +66,18 @@ export default function AdminMailingList() {
     const readStatus = localStorage.getItem('admin_mailing_list_read') === 'true'
     setNotificationRead(readStatus)
   }, [session, status])
+
+  useEffect(() => {
+    if (!session) return
+    fetch('/api/admin/users?subscribed=true')
+      .then(res => res.json())
+      .then((result: ApiResponse<{ count: number }>) => {
+        if (result.success && result.data) {
+          setUserSubscriberCount(result.data.count)
+        }
+      })
+      .catch(() => {})
+  }, [session])
 
   const fetchWeeklyEmailNotifications = async () => {
     try {
@@ -111,13 +124,14 @@ export default function AdminMailingList() {
     }
   }
 
-  if (status === 'loading' || !session) {
+  if (!session) {
     return (
       <div className="min-h-screen bg-cream py-12 px-4 flex items-center justify-center">
         <p className="text-charcoal">Loading...</p>
       </div>
     )
   }
+  
 
   if ((session.user as any)?.role !== 'admin') {
     return null
@@ -125,21 +139,6 @@ export default function AdminMailingList() {
 
   const activeSubscribers = entries.filter(e => !e.unsubscribed_at)
   const confirmedCount = activeSubscribers.filter(e => e.confirmed).length
-
-  // Get user subscribers count
-  const [userSubscriberCount, setUserSubscriberCount] = useState<number | null>(null)
-  useEffect(() => {
-    if (status === 'loading' || !session) return
-    fetch('/api/admin/users?subscribed=true')
-      .then(res => res.json())
-      .then((result: ApiResponse<{ count: number }>) => {
-        if (result.success && result.data) {
-          setUserSubscriberCount(result.data.count)
-        }
-      })
-      .catch(() => {})
-  }, [session, status])
-
   const totalSubscribers = confirmedCount + (userSubscriberCount || 0)
 
   return (
