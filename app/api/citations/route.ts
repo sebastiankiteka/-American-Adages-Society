@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/api-helpers'
 
 interface ApiResponse<T = any> {
@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
     const adageId = searchParams.get('adage_id')
     const verified = searchParams.get('verified')
 
-    let query = supabase
+    // Use supabaseAdmin to bypass RLS for server-side queries
+    // Citations are public, but RLS might block reads
+    let query = supabaseAdmin
       .from('citations')
       .select(`
         *,
@@ -84,13 +86,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify adage exists
-    const { data: adage } = await supabase
+    // Verify adage exists - use supabaseAdmin to bypass RLS
+    const { data: adage } = await supabaseAdmin
       .from('adages')
       .select('id')
       .eq('id', adage_id)
       .is('deleted_at', null)
-      .single()
+      .maybeSingle()
 
     if (!adage) {
       return NextResponse.json<ApiResponse>({
@@ -99,7 +101,8 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    const { data, error } = await supabase
+    // Use supabaseAdmin to bypass RLS for server-side inserts
+    const { data, error } = await supabaseAdmin
       .from('citations')
       .insert({
         adage_id,

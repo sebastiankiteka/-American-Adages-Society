@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/api-helpers'
 
 // GET /api/users/[id]/stats - Get comprehensive user statistics
@@ -344,8 +344,8 @@ export async function GET(
       })
       .slice(0, 10) // Top 10
 
-    // Get contributions
-    const { count: citationsSubmitted } = await supabase
+    // Get contributions - use supabaseAdmin to bypass RLS
+    const { count: citationsSubmitted } = await supabaseAdmin
       .from('citations')
       .select('*', { count: 'exact', head: true })
       .eq('submitted_by', id)

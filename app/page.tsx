@@ -5,6 +5,13 @@ import MailingListSignup from '@/components/MailingListSignup'
 import BackToTop from '@/components/BackToTop'
 
 export default function Home() {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -41,6 +48,70 @@ export default function Home() {
             The American Adages Society explores the timeless wisdom within language, 
             preserving and interpreting adages as cultural artifacts.
           </p>
+          <p className="text-xs text-text-metadata mt-4 text-center">
+            {today}
+          </p>
+        </div>
+      </section>
+
+      {/* What Is an Adage? Section */}
+      <section className="relative py-16 px-4 bg-bg-primary overflow-hidden">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-text-primary">
+            What Is an Adage?
+          </h2>
+          <p className="text-lg text-text-primary leading-relaxed mb-4">
+            An adage is a traditional saying that expresses a general truth, practical wisdom, or guiding principle for life.  
+            Adages are advisory in nature — they offer insight into behavior, consequence, character, or decision-making.
+          </p>
+          <ul className="list-disc list-inside mb-6 text-text-primary space-y-2">
+            <li>Convey durable wisdom</li>
+            <li>Apply broadly across situations</li>
+            <li>Often carry moral, strategic, or practical guidance</li>
+          </ul>
+          <div className="bg-card-bg-muted p-6 rounded-lg border border-border-medium">
+            <h3 className="text-xl font-semibold mb-3 text-text-primary">Examples:</h3>
+            <ul className="list-none space-y-1 text-text-primary">
+              <li>• A stitch in time saves nine</li>
+              <li>• Look before you leap</li>
+              <li>• You reap what you sow</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Idioms & Cultural Phrases Section */}
+      <section className="relative py-16 px-4 bg-card-bg overflow-hidden border-t border-section">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-text-primary">
+            Idioms & Cultural Phrases
+          </h2>
+          <p className="text-lg text-text-primary leading-relaxed mb-4">
+            Many inherited expressions are often called "adages" in everyday speech — but linguistically, they are different.
+          </p>
+          <p className="text-lg text-text-primary leading-relaxed mb-6">
+            An idiom is a figurative expression whose meaning cannot be understood from the literal words alone.
+          </p>
+          <div className="bg-card-bg-muted p-6 rounded-lg border border-border-medium mb-6">
+            <h3 className="text-xl font-semibold mb-3 text-text-primary">Examples:</h3>
+            <ul className="list-none space-y-1 text-text-primary">
+              <li>• Cooked his goose</li>
+              <li>• Happy as a clam</li>
+              <li>• Close but no cigar</li>
+            </ul>
+          </div>
+          <p className="text-lg text-text-primary leading-relaxed mb-6">
+            Language evolves through both wisdom and color.  
+            While adages provide guidance, idioms and phrases capture lived experience, humor, frustration, and cultural texture.
+          </p>
+          <p className="text-lg text-text-primary leading-relaxed mb-4">
+            For clarity and scholarly integrity, this archive separates:
+          </p>
+          <ul className="list-disc list-inside text-text-primary space-y-2">
+            <li>Adages (wisdom statements)</li>
+            <li>Proverbs (traditional cultural wisdom)</li>
+            <li>Idioms & Phrases (descriptive expressions)</li>
+          </ul>
         </div>
       </section>
 

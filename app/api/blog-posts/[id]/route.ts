@@ -1,7 +1,7 @@
 // API route for individual blog post operations
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse } from '@/lib/api-helpers'
+import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse, getClientIP } from '@/lib/api-helpers'
 import { errorLogger } from '@/lib/error-logger'
 import { BlogPost } from '@/lib/db-types'
 
@@ -39,7 +39,7 @@ export async function GET(
     }
 
     // Track view
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    const ipAddress = getClientIP(request)
     await trackView('blog', id, user?.id, ipAddress)
 
     // Get related data

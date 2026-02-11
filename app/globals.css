@@ -147,6 +147,78 @@ textarea:focus-visible {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
+/* Mobile touch optimizations */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile touch target sizes - ensure minimum 44x44px */
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-touch-target-inline {
+  min-height: 44px;
+}
+
+/* Ensure touch targets are at least 44x44px on mobile */
+@media (max-width: 768px) {
+  /* Only apply to interactive elements, not all buttons/links */
+  button:not([disabled]),
+  a[href],
+  input:not([type="hidden"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  
+  /* Allow smaller touch targets for icons if they're in a larger container */
+  button svg,
+  a svg {
+    min-height: auto;
+    min-width: auto;
+  }
+  
+  /* Ensure navigation links are easily tappable */
+  nav a,
+  nav button {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* Improve touch scrolling on mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent text size adjustment on iOS */
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Fix iOS Safari viewport height issue */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
 /* Toast animation */
 @keyframes slide-in {
   from {

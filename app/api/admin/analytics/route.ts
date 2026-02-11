@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin, ApiResponse } from '@/lib/api-helpers'
 
 // GET /api/admin/analytics - Get analytics data for admin dashboard
@@ -15,15 +15,15 @@ export async function GET(request: NextRequest) {
 
     // Get total views by type (ALL TIME - for reference)
     const [adageViewsAllTime, blogViewsAllTime, forumViewsAllTime] = await Promise.all([
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'adage'),
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'blog'),
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'forum_thread'),
@@ -31,17 +31,17 @@ export async function GET(request: NextRequest) {
 
     // Get total views by type (FOR SELECTED PERIOD)
     const [adageViews, blogViews, forumViews] = await Promise.all([
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'adage')
         .gte('viewed_at', startDateISO),
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'blog')
         .gte('viewed_at', startDateISO),
-      supabase
+      supabaseAdmin
         .from('views')
         .select('*', { count: 'exact', head: true })
         .eq('target_type', 'forum_thread')
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     ])
 
     // Get views over time (last N days)
-    const { data: viewsOverTime } = await supabase
+    const { data: viewsOverTime } = await supabaseAdmin
       .from('views')
       .select('viewed_at, target_type')
       .gte('viewed_at', startDateISO)
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get most viewed adages (only for non-deleted adages)
-    const { data: topAdages } = await supabase
+    const { data: topAdages } = await supabaseAdmin
       .from('views')
       .select('target_id')
       .eq('target_type', 'adage')
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     // Get adage details for the viewed adages
     const adageIds = [...new Set((topAdages || []).map((v: any) => v.target_id))]
-    const { data: adagesData } = await supabase
+    const { data: adagesData } = await supabaseAdmin
       .from('adages')
       .select('id, adage')
       .in('id', adageIds)
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
 
     // Get most viewed blog posts (only for non-deleted posts)
-    const { data: topBlogs } = await supabase
+    const { data: topBlogs } = await supabaseAdmin
       .from('views')
       .select('target_id')
       .eq('target_type', 'blog')
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     // Get blog post details for the viewed posts
     const blogIds = [...new Set((topBlogs || []).map((v: any) => v.target_id))]
-    const { data: blogsData } = await supabase
+    const { data: blogsData } = await supabaseAdmin
       .from('blog_posts')
       .select('id, title')
       .in('id', blogIds)
@@ -138,20 +138,59 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
 
-    // Get unique visitors (by IP or user_id)
-    const { data: uniqueVisitors } = await supabase
-      .from('views')
+    // Get unique visitors from the unique_visitors table (more accurate)
+    const { data: uniqueVisitorStats } = await supabaseAdmin
+      .from('unique_visitor_stats')
+      .select('*')
+      .single()
+
+    // Get unique visitors for the selected period
+    const { data: periodUniqueVisitors } = await supabaseAdmin
+      .from('unique_visitors')
+      .select('user_id, ip_address, first_visit_at, last_visit_at')
+      .gte('first_visit_at', startDateISO)
+
+    // Also count visitors who visited during the period (even if they first visited earlier)
+    const { data: activeVisitors } = await supabaseAdmin
+      .from('unique_visitors')
       .select('user_id, ip_address')
-      .gte('viewed_at', startDateISO)
+      .gte('last_visit_at', startDateISO)
 
     const uniqueIPs = new Set<string>()
     const uniqueUsers = new Set<string>()
-    if (uniqueVisitors) {
-      uniqueVisitors.forEach((view) => {
-        if (view.ip_address) uniqueIPs.add(view.ip_address)
-        if (view.user_id) uniqueUsers.add(view.user_id)
+    const anonymousIPs = new Set<string>()
+    const uniqueIdentifiers = new Set<string>()
+    
+    if (activeVisitors) {
+      activeVisitors.forEach((visitor) => {
+        if (visitor.user_id) {
+          uniqueUsers.add(visitor.user_id)
+          uniqueIdentifiers.add(`user:${visitor.user_id}`)
+        }
+        if (visitor.ip_address) {
+          uniqueIPs.add(visitor.ip_address)
+          if (!visitor.user_id) {
+            anonymousIPs.add(visitor.ip_address)
+            uniqueIdentifiers.add(`ip:${visitor.ip_address}`)
+          }
+        }
       })
     }
+
+    const totalUniqueVisitors = uniqueIdentifiers.size
+    const totalUniqueVisitorsAllTime = uniqueVisitorStats?.total_unique_visitors || 0
+
+    // Get page views (target_type = 'page')
+    const { count: pageViews } = await supabaseAdmin
+      .from('views')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'page')
+      .gte('viewed_at', startDateISO)
+
+    const { count: pageViewsAllTime } = await supabaseAdmin
+      .from('views')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_type', 'page')
 
     // Get views by hour of day
     const viewsByHour: Record<number, number> = {}
@@ -169,13 +208,15 @@ export async function GET(request: NextRequest) {
           adages: adageViews.count || 0,
           blogs: blogViews.count || 0,
           forums: forumViews.count || 0,
-          total: (adageViews.count || 0) + (blogViews.count || 0) + (forumViews.count || 0),
+          pages: pageViews || 0,
+          total: (adageViews.count || 0) + (blogViews.count || 0) + (forumViews.count || 0) + (pageViews || 0),
         },
         totalsAllTime: {
           adages: adageViewsAllTime.count || 0,
           blogs: blogViewsAllTime.count || 0,
           forums: forumViewsAllTime.count || 0,
-          total: (adageViewsAllTime.count || 0) + (blogViewsAllTime.count || 0) + (forumViewsAllTime.count || 0),
+          pages: pageViewsAllTime || 0,
+          total: (adageViewsAllTime.count || 0) + (blogViewsAllTime.count || 0) + (forumViewsAllTime.count || 0) + (pageViewsAllTime || 0),
         },
         viewsOverTime: viewsByDate,
         topAdages: topAdagesList,
@@ -183,7 +224,13 @@ export async function GET(request: NextRequest) {
         uniqueVisitors: {
           uniqueIPs: uniqueIPs.size,
           uniqueUsers: uniqueUsers.size,
-          total: uniqueIPs.size + uniqueUsers.size,
+          anonymousIPs: anonymousIPs.size,
+          total: totalUniqueVisitors,
+          totalAllTime: totalUniqueVisitorsAllTime,
+          newVisitors7d: uniqueVisitorStats?.new_visitors_7d || 0,
+          newVisitors30d: uniqueVisitorStats?.new_visitors_30d || 0,
+          activeVisitors7d: uniqueVisitorStats?.active_visitors_7d || 0,
+          activeVisitors30d: uniqueVisitorStats?.active_visitors_30d || 0,
         },
         viewsByHour,
         period: {

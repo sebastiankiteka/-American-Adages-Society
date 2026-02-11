@@ -1,7 +1,7 @@
 // API route to get blog post by slug
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCurrentUser, trackView, ApiResponse } from '@/lib/api-helpers'
+import { getCurrentUser, trackView, ApiResponse, getClientIP } from '@/lib/api-helpers'
 import { BlogPost } from '@/lib/db-types'
 
 // GET /api/blog-posts/slug/[slug] - Get blog post by slug
@@ -38,7 +38,7 @@ export async function GET(
     }
 
     // Track view
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    const ipAddress = getClientIP(request)
     await trackView('blog', post.id, user?.id, ipAddress)
 
     // Get vote score
@@ -61,6 +61,14 @@ export async function GET(
     }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
 
 
 

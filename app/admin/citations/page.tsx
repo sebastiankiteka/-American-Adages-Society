@@ -14,6 +14,32 @@ interface ApiResponse<T = any> {
   message?: string
 }
 
+// Helper function to normalize citation source URLs
+function normalizeSourceUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') {
+    return null
+  }
+
+  const trimmed = url.trim()
+  if (trimmed === '') {
+    return null
+  }
+
+  // If URL doesn't start with http:// or https://, prepend https://
+  let normalized = trimmed
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    normalized = `https://${trimmed}`
+  }
+
+  // Validate the URL using the URL constructor
+  try {
+    new URL(normalized)
+    return normalized
+  } catch {
+    return null
+  }
+}
+
 export default function AdminCitations() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -86,7 +112,12 @@ export default function AdminCitations() {
       const challengesResult: ApiResponse<ReaderChallenge[]> = await challengesRes.json()
 
       if (citationsResult.success && citationsResult.data) {
-        setCitations(citationsResult.data)
+        // Normalize URLs when data is fetched, not during render
+        const normalizedCitations = citationsResult.data.map(citation => ({
+          ...citation,
+          normalizedSourceUrl: normalizeSourceUrl(citation.source_url)
+        }))
+        setCitations(normalizedCitations as Citation[])
       } else {
         setError(citationsResult.error || 'Failed to load citations')
       }
@@ -299,16 +330,21 @@ export default function AdminCitations() {
                         </span>
                       </div>
                       <p className="text-charcoal font-medium mb-2">{citation.source_text}</p>
-                      {citation.source_url && (
+                      {(citation as any).normalizedSourceUrl ? (
                         <a
-                          href={citation.source_url}
+                          href={(citation as any).normalizedSourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-bronze hover:underline"
+                          className="text-sm text-bronze hover:underline font-medium flex items-center gap-1 inline-flex"
                         >
-                          View Source →
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          View Source
                         </a>
-                      )}
+                      ) : citation.source_url ? (
+                        <span className="text-sm text-gray-500 italic">Invalid URL format</span>
+                      ) : null}
                       <p className="text-sm text-charcoal-light mt-2">
                         Adage ID: <Link href={`/archive/${citation.adage_id}`} className="text-bronze hover:underline">{citation.adage_id}</Link>
                       </p>

@@ -1,6 +1,6 @@
 // API route for contact form submissions
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/api-helpers'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import nodemailer from 'nodemailer'
@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to database
-    const { data, error } = await supabase
+    // Use supabaseAdmin to bypass RLS for server-side inserts (RLS still protects direct client access)
+    const { data, error } = await supabaseAdmin
       .from('contact_messages')
       .insert({
         name,
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add to mailing list if not already there
-    await supabase
+    await supabaseAdmin
       .from('mailing_list')
       .upsert({
         email,
@@ -267,7 +268,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    let query = supabase
+    // Use supabaseAdmin for admin queries (bypasses RLS)
+    let query = supabaseAdmin
       .from('contact_messages')
       .select('*')
       .is('deleted_at', null)

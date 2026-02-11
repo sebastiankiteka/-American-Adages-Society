@@ -114,12 +114,31 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
     setQuery('')
   }
 
+  // Prevent body scroll when modal is open - only run on client
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow || 'unset'
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20" 
       onClick={onClose}
+      onTouchStart={(e) => {
+        // Close on touch outside
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Search"
@@ -127,6 +146,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
       <div 
         className="bg-card-bg rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border-medium" 
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Search dialog"
       >
@@ -156,7 +176,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
             />
             <button
               onClick={onClose}
-              className="text-text-metadata hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary rounded"
+              className="text-text-metadata hover:text-text-primary active:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary rounded touch-manipulation mobile-touch-target"
               aria-label="Close search"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +199,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
                   <button
                     key={`${result.type}-${result.id}`}
                     onClick={() => handleResultClick(result.url)}
-                    className="w-full text-left p-4 hover:bg-card-bg-muted transition-colors bg-card-bg"
+                    className="w-full text-left p-4 hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors bg-card-bg touch-manipulation mobile-touch-target-inline"
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-1">
@@ -210,7 +230,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
                 <Link
                   href={`/search?q=${encodeURIComponent(query)}`}
                   onClick={onClose}
-                  className="block w-full text-center px-4 py-2 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors text-sm font-medium"
+                  className="block w-full text-center px-4 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover active:bg-accent-hover transition-colors text-sm font-medium touch-manipulation mobile-touch-target"
                 >
                   View All Results →
                 </Link>

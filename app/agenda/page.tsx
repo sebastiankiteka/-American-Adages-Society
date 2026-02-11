@@ -7,6 +7,21 @@ interface ProgressData {
   adagesGoal: number
   totalViews: number
   viewsGoal: number
+  uniqueVisitors: number
+  uniqueVisitorsGoal: number
+}
+
+interface AnalyticsData {
+  totalViews: number
+  adageViews: number
+  blogViews: number
+  pageViews: number
+  adagesCount: number
+  uniqueVisitors?: {
+    total: number
+    loggedIn: number
+    anonymous: number
+  }
 }
 
 export default function Agenda() {
@@ -15,28 +30,30 @@ export default function Agenda() {
     adagesGoal: 100,
     totalViews: 0,
     viewsGoal: 1000,
+    uniqueVisitors: 0,
+    uniqueVisitorsGoal: 500,
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        // Fetch adages count
-        const adagesResponse = await fetch('/api/adages')
-        const adagesResult = await adagesResponse.json()
-        const adagesCount = adagesResult.success && adagesResult.data ? adagesResult.data.length : 0
+        // Fetch analytics from the same API that admin uses
+        const analyticsResponse = await fetch('/api/analytics/public')
+        const analyticsResult = await analyticsResponse.json()
 
-        // Calculate total views (sum of all adage views)
-        const totalViews = adagesResult.success && adagesResult.data
-          ? adagesResult.data.reduce((sum: number, adage: any) => sum + (adage.views_count || 0), 0)
-          : 0
-
-        setProgress({
-          adagesCount,
-          adagesGoal: 100, // Goal for Fall 2026
-          totalViews,
-          viewsGoal: 1000, // Initial goal
-        })
+        if (analyticsResult.success && analyticsResult.data) {
+          const data: AnalyticsData = analyticsResult.data
+          
+          setProgress({
+            adagesCount: data.adagesCount,
+            adagesGoal: 100, // Goal for Fall 2026
+            totalViews: data.totalViews, // Total views across all content types
+            viewsGoal: 1000, // Initial goal
+            uniqueVisitors: 0, // Not displayed publicly
+            uniqueVisitorsGoal: 500, // Not displayed publicly
+          })
+        }
       } catch (err) {
         console.error('Failed to fetch progress:', err)
       } finally {
@@ -101,9 +118,10 @@ export default function Agenda() {
                   ></div>
                 </div>
                 <p className="text-sm text-text-metadata mt-2">
-                  Total page views across all adages
+                  Total page views across all pages, adages, and blog posts
                 </p>
               </div>
+
             </div>
           )}
         </section>

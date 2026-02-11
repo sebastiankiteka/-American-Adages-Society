@@ -1,6 +1,6 @@
 // API route to get notification counts for user
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
 
 // GET /api/users/notifications/counts - Get notification counts
@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get unread notifications count
-    const { count: unreadNotifications } = await supabase
+    // Get unread notifications count - use supabaseAdmin to bypass RLS
+    const { count: unreadNotifications } = await supabaseAdmin
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
@@ -71,6 +71,15 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

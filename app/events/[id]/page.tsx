@@ -85,9 +85,9 @@ export default function EventDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream py-12 px-4">
+      <div className="min-h-screen bg-bg-primary py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <p className="text-charcoal-light">Loading event...</p>
+          <p className="text-text-secondary">Loading event...</p>
         </div>
       </div>
     )
@@ -95,19 +95,19 @@ export default function EventDetail() {
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-cream py-12 px-4">
+      <div className="min-h-screen bg-bg-primary py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <Link 
             href="/events"
-            className="text-bronze hover:text-bronze/80 mb-6 inline-block"
+            className="text-accent-primary hover:text-accent-hover mb-6 inline-block"
           >
             ← Back to Events
           </Link>
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-soft-gray">
-            <h1 className="text-4xl font-bold font-serif mb-6 text-charcoal">
+          <div className="bg-card-bg p-8 rounded-lg shadow-sm border border-border-medium">
+            <h1 className="text-4xl font-bold font-serif mb-6 text-text-primary">
               Event Not Found
             </h1>
-            <p className="text-charcoal-light">
+            <p className="text-text-secondary">
               {error || "The event you're looking for doesn't exist."}
             </p>
           </div>
@@ -130,26 +130,26 @@ export default function EventDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-cream py-12 px-4">
+    <div className="min-h-screen bg-bg-primary py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <Link 
           href="/events"
-          className="text-bronze hover:text-bronze/80 mb-6 inline-block"
+          className="text-accent-primary hover:text-accent-hover mb-6 inline-block"
         >
           ← Back to Events
         </Link>
         
-        <article className="bg-white p-8 md:p-12 rounded-lg shadow-sm border border-soft-gray">
+        <article className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium">
           <div className="mb-6">
             {event.event_type && (
-              <span className="inline-block px-3 py-1 bg-bronze/20 text-bronze rounded-full text-sm font-medium mb-4 capitalize">
+              <span className="inline-block px-3 py-1 bg-accent-primary/20 text-accent-primary rounded-full text-sm font-medium mb-4 capitalize">
                 {event.event_type}
               </span>
             )}
-            <h1 className="text-4xl md:text-5xl font-bold font-serif text-charcoal mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold font-serif text-text-primary mb-4">
               {event.title}
             </h1>
-            <div className="flex flex-wrap gap-4 text-charcoal-light mb-6">
+            <div className="flex flex-wrap gap-4 text-text-secondary mb-6">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -169,24 +169,24 @@ export default function EventDetail() {
           </div>
 
           {event.description && (
-            <div className="prose prose-lg max-w-none text-charcoal-light mb-8">
+            <div className="prose prose-lg max-w-none text-text-secondary mb-8">
               <div className="whitespace-pre-line">{event.description}</div>
             </div>
           )}
 
           {event.end_date && event.end_date !== event.event_date && (
-            <div className="bg-cream p-4 rounded-lg border border-soft-gray mb-6">
-              <p className="text-sm text-charcoal-light">
+            <div className="bg-card-bg-muted p-4 rounded-lg border border-border-medium mb-6">
+              <p className="text-sm text-text-secondary">
                 <strong>End Date:</strong> {format(new Date(event.end_date), 'EEEE, MMMM d, yyyy')}
               </p>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3 pt-6 border-t border-soft-gray">
+          <div className="flex flex-wrap gap-3 pt-6 border-t border-border-medium">
             <a
               href={generateICalLink(event)}
               download={`${event.title.replace(/\s+/g, '-')}.ics`}
-              className="px-6 py-3 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors font-medium"
+              className="px-6 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium"
             >
               Download iCal
             </a>
@@ -195,7 +195,7 @@ export default function EventDetail() {
                 href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${googleStartDate}/${googleEndDate}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location || '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-soft-gray text-charcoal rounded-lg hover:bg-bronze hover:text-cream transition-colors font-medium"
+                className="px-6 py-3 bg-card-bg-muted text-text-primary rounded-lg hover:bg-accent-primary hover:text-text-inverse transition-colors font-medium"
               >
                 Add to Google Calendar
               </a>

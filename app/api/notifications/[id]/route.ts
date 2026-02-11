@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
 
 // DELETE /api/notifications/[id] - Dismiss/delete a notification
@@ -19,13 +19,13 @@ export async function DELETE(
 
     const { id } = params
 
-    // Verify ownership
-    const { data: notification } = await supabase
+    // Verify ownership - use supabaseAdmin to bypass RLS
+    const { data: notification } = await supabaseAdmin
       .from('notifications')
       .select('user_id')
       .eq('id', id)
       .is('deleted_at', null)
-      .single()
+      .maybeSingle()
 
     if (!notification || notification.user_id !== user.id) {
       return NextResponse.json<ApiResponse>({
@@ -34,8 +34,8 @@ export async function DELETE(
       }, { status: 404 })
     }
 
-    // Soft delete the notification
-    const { error } = await supabase
+    // Soft delete the notification - use supabaseAdmin to bypass RLS
+    const { error } = await supabaseAdmin
       .from('notifications')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
@@ -58,6 +58,15 @@ export async function DELETE(
     }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

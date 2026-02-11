@@ -3,7 +3,10 @@
 import Link from 'next/link'
 import MailingListSignup from './MailingListSignup'
 
+const CURRENT_YEAR = 2026
+
 export default function Footer() {
+
   return (
     <footer className="bg-nav-bg text-text-inverse py-12 px-4 mt-auto">
       <div className="max-w-7xl mx-auto">
@@ -47,7 +50,7 @@ export default function Footer() {
               <li>
                 <a 
                   href="https://utexas.campuslabs.com/engage/organization/americanadagessociety" 
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-text-inverse opacity-90 hover:text-accent-primary hover:opacity-100 transition-colors font-semibold flex items-center gap-1"
                 >
@@ -116,7 +119,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-border-medium pt-8 text-center text-sm text-text-inverse opacity-80">
-          <p>&copy; {new Date().getFullYear()} American Adages Society. All rights reserved.</p>
+          <p>&copy; {CURRENT_YEAR} American Adages Society. All rights reserved.</p>
         </div>
       </div>
     </footer>

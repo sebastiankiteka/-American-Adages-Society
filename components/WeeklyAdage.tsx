@@ -142,6 +142,20 @@ export default function WeeklyAdage() {
               {adage.definition}
             </p>
 
+            {adage.published_at || adage.created_at ? (
+              <p className="text-sm text-text-metadata mt-2 text-center">
+                Published {new Date(adage.published_at || adage.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            ) : (
+              <p className="text-sm text-text-metadata mt-2 text-center">
+                Featured this week
+              </p>
+            )}
+
             {adage.featured_reason && (
               <p className="text-sm text-accent-primary italic text-center mb-2 px-4">
                 Featured: {adage.featured_reason}

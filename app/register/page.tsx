@@ -76,21 +76,21 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg border border-soft-gray">
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full bg-card-bg p-8 rounded-lg shadow-lg border border-border-medium">
           <div className="text-center">
             <div className="mb-4">
-              <svg className="w-16 h-16 mx-auto text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-16 h-16 mx-auto text-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold font-serif mb-2 text-charcoal">
+            <h1 className="text-3xl font-bold font-serif mb-2 text-text-primary">
               Registration Successful!
             </h1>
-            <p className="text-charcoal-light mb-4">
+            <p className="text-text-secondary mb-4">
               Your account has been created. Please check your email to verify your account.
             </p>
-            <p className="text-sm text-charcoal-light">
+            <p className="text-sm text-text-secondary">
               Redirecting to login page...
             </p>
           </div>
@@ -100,20 +100,20 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg border border-soft-gray">
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full bg-card-bg p-8 rounded-lg shadow-lg border border-border-medium">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold font-serif mb-2 text-charcoal">
+          <h1 className="text-3xl font-bold font-serif mb-2 text-text-primary">
             Create Account
           </h1>
-          <p className="text-charcoal-light">
+          <p className="text-text-secondary">
             Join the American Adages Society community
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
               Email *
             </label>
             <input
@@ -124,7 +124,7 @@ export default function Register() {
                 setFormData({ ...formData, email: e.target.value })
                 setError('')
               }}
-              className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+              className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
               placeholder="your.email@example.com"
               required
               disabled={loading}
@@ -132,7 +132,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-charcoal mb-2">
+            <label htmlFor="username" className="block text-sm font-medium text-text-primary mb-2">
               Username (optional)
             </label>
             <input
@@ -143,17 +143,17 @@ export default function Register() {
                 setFormData({ ...formData, username: e.target.value })
                 setError('')
               }}
-              className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+              className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
               placeholder="username"
               disabled={loading}
             />
-            <p className="text-xs text-charcoal-light mt-1">
+            <p className="text-xs text-text-secondary mt-1">
               If not provided, we'll use your email username
             </p>
           </div>
 
           <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-charcoal mb-2">
+            <label htmlFor="displayName" className="block text-sm font-medium text-text-primary mb-2">
               Display Name (optional)
             </label>
             <input
@@ -164,14 +164,14 @@ export default function Register() {
                 setFormData({ ...formData, displayName: e.target.value })
                 setError('')
               }}
-              className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+              className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
               placeholder="Your Name"
               disabled={loading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-charcoal mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
               Password *
             </label>
             <input
@@ -182,18 +182,18 @@ export default function Register() {
                 setFormData({ ...formData, password: e.target.value })
                 setError('')
               }}
-              className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+              className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
               required
               disabled={loading}
               minLength={8}
             />
-            <p className="text-xs text-charcoal-light mt-1">
+            <p className="text-xs text-text-secondary mt-1">
               Must be at least 8 characters long
             </p>
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal mb-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary mb-2">
               Confirm Password *
             </label>
             <input
@@ -204,7 +204,7 @@ export default function Register() {
                 setFormData({ ...formData, confirmPassword: e.target.value })
                 setError('')
               }}
-              className="w-full px-4 py-2 rounded-lg border border-soft-gray focus:border-bronze focus:outline-none focus:ring-2 focus:ring-bronze/20 bg-white text-charcoal"
+              className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg text-text-primary"
               required
               disabled={loading}
               minLength={8}
@@ -212,7 +212,7 @@ export default function Register() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-sm">
+            <div className="bg-error-bg border border-error-text/30 text-error-text p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -220,16 +220,16 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-6 py-3 bg-bronze text-cream rounded-lg hover:bg-bronze/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-charcoal-light">
+          <p className="text-sm text-text-secondary">
             Already have an account?{' '}
-            <Link href="/login" className="text-bronze hover:underline">
+            <Link href="/login" className="text-accent-primary hover:underline">
               Sign in here
             </Link>
           </p>
@@ -238,6 +238,15 @@ export default function Register() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
 
 
 

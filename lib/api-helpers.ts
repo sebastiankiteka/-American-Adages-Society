@@ -1,6 +1,30 @@
+// Helper function to extract IP address from request
+export function getClientIP(request: Request): string | undefined {
+  // Try various headers that might contain the real IP
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  if (forwardedFor) {
+    // x-forwarded-for can contain multiple IPs, take the first one
+    return forwardedFor.split(',')[0].trim()
+  }
+  
+  const realIP = request.headers.get('x-real-ip')
+  if (realIP) {
+    return realIP.trim()
+  }
+  
+  const cfConnectingIP = request.headers.get('cf-connecting-ip') // Cloudflare
+  if (cfConnectingIP) {
+    return cfConnectingIP.trim()
+  }
+  
+  // For localhost/dev, we can't get real IP, but we can use a placeholder
+  // This helps distinguish between different sessions
+  return undefined // Will be null in database, which is fine
+}
+
 // Helper functions for API routes
 import { auth } from './auth'
-import { supabase } from './supabase'
+import { supabase, supabaseAdmin } from './supabase'
 
 // Role hierarchy for permission checking
 const roleHierarchy: Record<string, number> = {
@@ -174,18 +198,115 @@ export async function getViewCount(targetType: string, targetId: string): Promis
   return count || 0
 }
 
-// Track view
+// Track view and update unique visitors
 export async function trackView(
   targetType: string,
   targetId: string,
   userId?: string,
   ipAddress?: string
 ) {
-  await supabase.from('views').insert({
-    target_type: targetType,
-    target_id: targetId,
-    user_id: userId,
-    ip_address: ipAddress,
-  })
+  try {
+    // Insert view record using supabaseAdmin to bypass RLS
+    const { error: insertError } = await supabaseAdmin.from('views').insert({
+      target_type: targetType,
+      target_id: targetId,
+      user_id: userId || null,
+      ip_address: ipAddress || null,
+    })
+
+    if (insertError) {
+      console.error(`[trackView] Failed to insert view for ${targetType} ${targetId}:`, insertError.message)
+      return // Don't update count if insert failed
+    }
+
+    // Update unique visitors table
+    try {
+      const { error: uniqueVisitorError } = await supabaseAdmin.rpc('update_unique_visitor', {
+        p_user_id: userId || null,
+        p_ip_address: ipAddress || null,
+      })
+      
+      if (uniqueVisitorError) {
+        console.error(`[trackView] Failed to update unique visitor:`, uniqueVisitorError.message)
+        // Don't fail the whole operation if unique visitor update fails
+      }
+    } catch (error: any) {
+      console.error(`[trackView] Error updating unique visitor:`, error.message)
+      // Continue even if unique visitor update fails
+    }
+
+    // Update views_count on the target table (denormalized counter)
+    // First get current count, then increment
+    if (targetType === 'adage') {
+      const { data, error: selectError } = await supabaseAdmin
+        .from('adages')
+        .select('views_count')
+        .eq('id', targetId)
+        .single()
+      
+      if (selectError) {
+        console.error(`[trackView] Failed to get views_count for adage ${targetId}:`, selectError.message)
+        return
+      }
+      
+      if (data) {
+        const { error: updateError } = await supabaseAdmin
+          .from('adages')
+          .update({ views_count: (data.views_count || 0) + 1 })
+          .eq('id', targetId)
+
+        if (updateError) {
+          console.error(`[trackView] Failed to update views_count for adage ${targetId}:`, updateError.message)
+        }
+      }
+    } else if (targetType === 'blog') {
+      const { data, error: selectError } = await supabaseAdmin
+        .from('blog_posts')
+        .select('views_count')
+        .eq('id', targetId)
+        .single()
+      
+      if (selectError) {
+        console.error(`[trackView] Failed to get views_count for blog ${targetId}:`, selectError.message)
+        return
+      }
+      
+      if (data) {
+        const { error: updateError } = await supabaseAdmin
+          .from('blog_posts')
+          .update({ views_count: (data.views_count || 0) + 1 })
+          .eq('id', targetId)
+
+        if (updateError) {
+          console.error(`[trackView] Failed to update views_count for blog ${targetId}:`, updateError.message)
+        }
+      }
+    } else if (targetType === 'forum_thread') {
+      const { data, error: selectError } = await supabaseAdmin
+        .from('forum_threads')
+        .select('views_count')
+        .eq('id', targetId)
+        .single()
+      
+      if (selectError) {
+        console.error(`[trackView] Failed to get views_count for forum_thread ${targetId}:`, selectError.message)
+        return
+      }
+      
+      if (data) {
+        const { error: updateError } = await supabaseAdmin
+          .from('forum_threads')
+          .update({ views_count: (data.views_count || 0) + 1 })
+          .eq('id', targetId)
+
+        if (updateError) {
+          console.error(`[trackView] Failed to update views_count for forum_thread ${targetId}:`, updateError.message)
+        }
+      }
+    }
+  } catch (error: any) {
+    // Log but don't break page loads if analytics fail
+    console.error(`[trackView] Unexpected error tracking view for ${targetType} ${targetId}:`, error.message)
+  }
 }
 

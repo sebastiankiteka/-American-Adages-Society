@@ -138,8 +138,8 @@ export default function Events() {
                 onClick={() => setSelectedType(type)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
                   selectedType === type
-                    ? 'bg-bronze text-cream'
-                    : 'bg-white text-charcoal border border-soft-gray hover:border-bronze'
+                    ? 'bg-accent-primary text-text-inverse'
+                    : 'bg-card-bg text-text-primary border border-border-medium hover:border-accent-primary'
                 }`}
               >
                 {type}

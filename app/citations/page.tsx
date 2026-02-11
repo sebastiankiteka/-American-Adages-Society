@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -13,6 +13,7 @@ interface Citation {
   source_type?: 'academic' | 'historical' | 'literary' | 'other'
   verified: boolean
   created_at: string
+  normalizedSourceUrl?: string | null // Pre-normalized URL, computed during fetch
   adage?: {
     id: string
     adage: string
@@ -50,204 +51,137 @@ interface ApiResponse<T = any> {
   message?: string
 }
 
-// Component to display a citation with related sources
-function CitationCard({ citation, allCitations }: { citation: Citation; allCitations: Citation[] }) {
-  // Find related sources
-  const relatedSources = useMemo(() => {
-    const related: Citation[] = []
-    
-    // 1. Other citations for the same adage
-    if (citation.adage_id) {
-      const sameAdage = allCitations.filter(
-        c => c.id !== citation.id && 
-        c.adage_id === citation.adage_id &&
-        c.verified
-      )
-      related.push(...sameAdage.slice(0, 3))
-    }
-    
-    // 2. Citations with the same source type
-    if (citation.source_type) {
-      const sameType = allCitations.filter(
-        c => c.id !== citation.id && 
-        c.source_type === citation.source_type &&
-        c.verified &&
-        !related.find(r => r.id === c.id)
-      )
-      related.push(...sameType.slice(0, 2))
-    }
-    
-    // 3. Citations with similar keywords (simple keyword matching)
-    if (citation.source_text) {
-      const keywords = citation.source_text.toLowerCase().split(/\s+/).filter(w => w.length > 4)
-      const similar = allCitations.filter(
-        c => c.id !== citation.id &&
-        c.verified &&
-        !related.find(r => r.id === c.id) &&
-        keywords.some(keyword => 
-          c.source_text.toLowerCase().includes(keyword)
-        )
-      )
-      related.push(...similar.slice(0, 2))
-    }
-    
-    return related.slice(0, 5) // Limit to 5 related sources
-  }, [citation, allCitations])
+// Helper function to normalize citation source URLs
+function normalizeSourceUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') {
+    return null
+  }
 
-  // Example related sources if none found (for demonstration)
-  const exampleRelatedSources: Citation[] = useMemo(() => {
-    if (relatedSources.length > 0) return []
-    
-    // Create example related sources based on the citation
-    const examples: Partial<Citation>[] = [
-      {
-        id: 'example-1',
-        source_text: citation.source_type === 'academic' 
-          ? 'Oxford Dictionary of Proverbs, 5th Edition. Oxford University Press, 2015.'
-          : citation.source_type === 'historical'
-          ? 'Historical Dictionary of American Slang, Volume 2. Random House, 1997.'
-          : 'The Penguin Dictionary of Proverbs. Penguin Books, 2006.',
-        source_url: 'https://example.com/source-1',
-        source_type: citation.source_type || 'academic',
-        verified: true,
-        adage: citation.adage,
-        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'example-2',
-        source_text: citation.source_type === 'literary'
-          ? 'Shakespeare\'s Complete Works, Act 3, Scene 2. Edited by John Smith, 2020.'
-          : 'Merriam-Webster\'s Dictionary of American Proverbs. Merriam-Webster, 2012.',
-        source_url: 'https://example.com/source-2',
-        source_type: citation.source_type || 'historical',
-        verified: true,
-        adage: citation.adage,
-        created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ]
-    
-    return examples as Citation[]
-  }, [relatedSources.length, citation])
+  const trimmed = url.trim()
+  if (trimmed === '') {
+    return null
+  }
 
-  const displaySources = relatedSources.length > 0 ? relatedSources : exampleRelatedSources
+  // If URL doesn't start with http:// or https://, prepend https://
+  let normalized = trimmed
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    normalized = `https://${trimmed}`
+  }
+
+  // Validate the URL using the URL constructor
+  try {
+    new URL(normalized)
+    return normalized
+  } catch {
+    return null
+  }
+}
+
+// Component to display an adage with its citations in a dropdown
+function AdageCitationGroup({ 
+  adageId, 
+  adagePhrase, 
+  citations, 
+  adageLink 
+}: { 
+  adageId: string
+  adagePhrase: string
+  citations: Citation[]
+  adageLink: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <div className="bg-card-bg p-6 rounded-lg shadow-sm border border-border-medium">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          {citation.adage && (
-            <Link
-              href={`/archive/${citation.adage.id}`}
-              className="text-lg font-semibold text-accent-primary hover:underline mb-2 block"
-            >
-              "{citation.adage.adage}"
-            </Link>
-          )}
-          <p className="text-text-primary mb-2">{citation.source_text}</p>
-          {citation.source_url && (
-            <a
-              href={citation.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-accent-primary hover:underline"
-            >
-              View Source →
-            </a>
-          )}
-        </div>
-        <div className="ml-4">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            citation.verified
-              ? 'bg-green-100 text-green-800'
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            {citation.verified ? 'Verified' : 'Pending'}
+    <div className="bg-card-bg rounded-lg shadow-sm border border-border-medium">
+      {/* Header: Adage → Citation Count → Dropdown */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-card-bg-muted transition-colors text-left"
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Link
+            href={adageLink}
+            onClick={(e) => e.stopPropagation()}
+            className="text-lg font-semibold text-accent-primary hover:underline flex-shrink-0"
+          >
+            "{adagePhrase}"
+          </Link>
+          <span className="text-text-metadata">→</span>
+          <span className="text-text-primary font-medium">
+            {citations.length} {citations.length === 1 ? 'citation' : 'citations'}
           </span>
         </div>
-      </div>
-      <div className="flex items-center justify-between text-sm text-charcoal-light">
-        <div className="flex items-center gap-4">
-          {citation.source_type && (
-            <span className="capitalize">{citation.source_type}</span>
-          )}
-          {citation.submitted_by_user && (
-            <span>
-              by {citation.submitted_by_user.display_name || citation.submitted_by_user.username || 'User'}
-            </span>
-          )}
-        </div>
-        <span>{format(new Date(citation.created_at), 'MMM d, yyyy')}</span>
-      </div>
+        <svg
+          className={`w-5 h-5 text-text-metadata transition-transform flex-shrink-0 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-      {/* Related Sources Section - Always Visible */}
-      <div className="mt-6 pt-6 border-t border-border-medium">
-        <h3 className="text-lg font-bold font-serif text-text-primary mb-4">
-          Related Sources
-          {relatedSources.length > 0 && (
-            <span className="text-sm font-normal text-text-metadata ml-2">
-              ({relatedSources.length})
-            </span>
-          )}
-          {relatedSources.length === 0 && (
-            <span className="text-sm font-normal text-text-metadata ml-2">
-              (Example)
-            </span>
-          )}
-        </h3>
-        
-        {displaySources.length > 0 ? (
-          <div className="space-y-3">
-            {displaySources.map((related) => (
-              <div
-                key={related.id}
-                className="bg-card-bg-muted p-4 rounded-lg border border-border-medium hover:border-accent-primary transition-colors"
-              >
-                {related.adage && (
-                  <Link
-                    href={`/archive/${related.adage.id}`}
-                    className="text-sm font-semibold text-accent-primary hover:underline mb-1 block"
-                  >
-                    "{related.adage.adage}"
-                  </Link>
-                )}
-                <p className="text-sm text-text-primary mb-2">
-                  {related.source_text}
-                </p>
-                <div className="flex items-center justify-between text-xs text-text-metadata">
-                  <div className="flex items-center gap-3">
-                    {related.source_type && (
-                      <span className="capitalize px-2 py-1 bg-card-bg rounded">{related.source_type}</span>
-                    )}
-                    {related.verified && (
-                      <span className="text-green-600 font-medium">✓ Verified</span>
-                    )}
-                  </div>
-                  {related.source_url && (
-                    <a
-                      href={related.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-bronze hover:underline font-medium"
-                    >
-                      View Source →
-                    </a>
+      {/* Dropdown Content: List of Citations */}
+      {isOpen && (
+        <div className="border-t border-border-medium p-4 space-y-4">
+          {citations.map((citation) => (
+            <div
+              key={citation.id}
+              className="bg-card-bg-muted p-4 rounded-lg border border-border-medium"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <p className="text-text-primary flex-1">{citation.source_text}</p>
+                <span className={`ml-4 px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                  citation.verified
+                    ? 'bg-success-bg text-success-text'
+                    : 'bg-warning-bg text-warning-text'
+                }`}>
+                  {citation.verified ? 'Verified' : 'Pending'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-text-metadata">
+                <div className="flex items-center gap-4">
+                  {citation.source_type && (
+                    <span className="capitalize">{citation.source_type}</span>
+                  )}
+                  {citation.submitted_by_user && (
+                    <span>
+                      by {citation.submitted_by_user.display_name || citation.submitted_by_user.username || 'User'}
+                    </span>
                   )}
                 </div>
+                <div className="flex items-center gap-3">
+                  {citation.normalizedSourceUrl ? (
+                    <a
+                      href={citation.normalizedSourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent-primary hover:underline font-medium flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      View Source
+                    </a>
+                  ) : citation.source_url ? (
+                    <span className="text-text-metadata text-xs italic">Invalid URL</span>
+                  ) : null}
+                  <span>{format(new Date(citation.created_at), 'MMM d, yyyy')}</span>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-text-metadata italic">
-            No related sources found yet. Check back later as more citations are added.
-          </p>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-export default function CitationsPage() {
-  const { data: session } = useSession()
+function CitationsPageContent() {
+  const { data: session, status } = useSession()
   const [activeTab, setActiveTab] = useState<'citations' | 'challenges'>('citations')
   const [citations, setCitations] = useState<Citation[]>([])
   const [challenges, setChallenges] = useState<ReaderChallenge[]>([])
@@ -284,7 +218,12 @@ export default function CitationsPage() {
         const response = await fetch('/api/citations')
         const result: ApiResponse<Citation[]> = await response.json()
         if (result.success && result.data) {
-          setCitations(result.data)
+          // Normalize URLs when data is fetched, not during render
+          const normalizedCitations = result.data.map(citation => ({
+            ...citation,
+            normalizedSourceUrl: normalizeSourceUrl(citation.source_url)
+          }))
+          setCitations(normalizedCitations as Citation[])
         } else {
           setError(result.error || 'Failed to load citations')
         }
@@ -393,6 +332,35 @@ export default function CitationsPage() {
       setSubmitting(false)
     }
   }
+
+  // Group citations by adage_id - deterministic, no client-only logic
+  const groupedByAdage = useMemo(() => {
+    if (citations.length === 0) {
+      return []
+    }
+    
+    const groups = new Map<string, { adage: Citation['adage']; citations: Citation[] }>()
+    
+    citations.forEach((citation) => {
+      const adageId = citation.adage_id || 'unknown'
+      
+      if (!groups.has(adageId)) {
+        groups.set(adageId, {
+          adage: citation.adage,
+          citations: []
+        })
+      }
+      
+      groups.get(adageId)!.citations.push(citation)
+    })
+    
+    return Array.from(groups.entries()).map(([adageId, data]) => ({
+      adageId,
+      adagePhrase: data.adage?.adage || 'Unknown Adage',
+      adageLink: data.adage?.id ? `/archive/${data.adage.id}` : '#',
+      citations: data.citations
+    }))
+  }, [citations])
 
   return (
     <div className="min-h-screen bg-bg-primary py-12 px-4">
@@ -660,13 +628,17 @@ export default function CitationsPage() {
                 <p className="text-text-primary">No citations submitted yet.</p>
               </div>
             ) : (
-              citations.map((citation) => (
-                <CitationCard
-                  key={citation.id}
-                  citation={citation}
-                  allCitations={citations}
-                />
-              ))
+              <div className="space-y-3">
+                {groupedByAdage.map((group) => (
+                  <AdageCitationGroup
+                    key={group.adageId}
+                    adageId={group.adageId}
+                    adagePhrase={group.adagePhrase}
+                    citations={group.citations}
+                    adageLink={group.adageLink}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -694,7 +666,7 @@ export default function CitationsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           challenge.status === 'accepted' ? 'bg-success-bg text-success-text' :
                           challenge.status === 'rejected' ? 'bg-error-bg text-error-text' :
-                          challenge.status === 'reviewed' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                          challenge.status === 'reviewed' ? 'bg-card-bg-muted text-text-primary' :
                           'bg-warning-bg text-warning-text'
                         }`}>
                           {challenge.status}
@@ -729,6 +701,22 @@ export default function CitationsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function CitationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-bg-primary py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-text-primary">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CitationsPageContent />
+    </Suspense>
   )
 }
 

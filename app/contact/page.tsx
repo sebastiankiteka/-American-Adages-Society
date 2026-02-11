@@ -185,6 +185,40 @@ export default function Contact() {
           </div>
         </div>
 
+        {/* Official Links Section */}
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
+            Official Links
+          </h2>
+          <p className="text-text-secondary mb-6">
+            Connect with us through our official channels and resources.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a
+              href="https://linktr.ee/AmericanAdagesSociety"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center px-6 py-4 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium"
+            >
+              <span>Visit Our Linktree</span>
+              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSfIGXsWgozbMYhfkCpA9J2H6TA0vCrz6Yy28IiA_W4YSaYw5w/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center px-6 py-4 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium"
+            >
+              <span>Submit Interest Form</span>
+              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+        </section>
+
         {/* Contact Form */}
         <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium">
           <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">

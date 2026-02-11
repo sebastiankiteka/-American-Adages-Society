@@ -1,6 +1,6 @@
 // API route for mailing list
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/api-helpers'
 
 // POST /api/mailing-list - Subscribe to mailing list
@@ -21,17 +21,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already exists and not unsubscribed
-    const { data: existing } = await supabase
+    // Use supabaseAdmin to bypass RLS for server-side queries
+    const { data: existing } = await supabaseAdmin
       .from('mailing_list')
       .select('*')
       .eq('email', email)
       .is('deleted_at', null)
-      .single()
+      .maybeSingle()
 
     if (existing) {
       if (existing.unsubscribed_at) {
         // Re-subscribe
-        const { data, error } = await supabase
+        // Use supabaseAdmin to bypass RLS for server-side updates
+        const { data, error } = await supabaseAdmin
           .from('mailing_list')
           .update({
             unsubscribed_at: null,
@@ -79,7 +81,8 @@ export async function POST(request: NextRequest) {
         userId = user.id
       } else {
         // Try to find user by email (even if not logged in)
-        const { data: userByEmail } = await supabase
+        // Use supabaseAdmin to bypass RLS for server-side queries
+        const { data: userByEmail } = await supabaseAdmin
           .from('users')
           .select('id')
           .eq('email', email)
@@ -106,7 +109,8 @@ export async function POST(request: NextRequest) {
       insertData.user_id = userId
     }
 
-    const { data, error } = await supabase
+    // Use supabaseAdmin to bypass RLS for server-side inserts
+    const { data, error } = await supabaseAdmin
       .from('mailing_list')
       .insert(insertData)
       .select()
@@ -128,7 +132,8 @@ export async function POST(request: NextRequest) {
           source: validSource,
           confirmed: true,
         }
-        const { data: retryResult, error: retryError } = await supabase
+        // Use supabaseAdmin to bypass RLS for server-side inserts
+        const { data: retryResult, error: retryError } = await supabaseAdmin
           .from('mailing_list')
           .insert(retryData)
           .select()
@@ -175,7 +180,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const limit = parseInt(searchParams.get('limit') || '1000')
 
-    const { data, error } = await supabase
+    // Use supabaseAdmin to bypass RLS for admin queries
+    const { data, error } = await supabaseAdmin
       .from('mailing_list')
       .select('*')
       .is('deleted_at', null)

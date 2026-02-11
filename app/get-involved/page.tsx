@@ -32,6 +32,10 @@ const faqs = [
     question: 'What is your non-hazing policy?',
     answer: 'The American Adages Society has a strict non-hazing policy. We are committed to creating an inclusive, respectful environment where all members feel welcome and valued.',
   },
+  {
+    question: 'Why should I join?',
+    answer: 'Joining the American Adages Society allows you to contribute to a meaningful cultural archive while developing transferable skills in research, writing, documentation, and digital publishing. Members gain experience, leadership opportunities, and collaborative exposure — while helping preserve language traditions that might otherwise disappear. Our model is mutually beneficial: you grow academically and professionally, and the Society grows through your contribution.',
+  },
 ]
 
 export default function GetInvolved() {
@@ -154,6 +158,34 @@ export default function GetInvolved() {
             can illuminate a strong path forward. We recruit year-round—no application required!
           </p>
         </div>
+
+        {/* Connect & Participate Section */}
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
+            Connect & Participate
+          </h2>
+          <p className="text-text-secondary mb-6">
+            Stay connected with our community and access additional resources through our official links.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <a
+              href="https://linktr.ee/AmericanAdagesSociety"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-8 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium text-center"
+            >
+              Visit Our Linktree
+            </a>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSfIGXsWgozbMYhfkCpA9J2H6TA0vCrz6Yy28IiA_W4YSaYw5w/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-8 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium text-center"
+            >
+              Submit Interest Form
+            </a>
+          </div>
+        </section>
 
         {/* Interest Form */}
         <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
@@ -322,6 +354,22 @@ export default function GetInvolved() {
             className="inline-block px-6 py-3 bg-card-bg-muted text-text-primary rounded-lg hover:bg-accent-primary hover:text-text-inverse transition-colors font-medium"
           >
             Reach Out
+          </a>
+        </section>
+
+        {/* Volunteer & Service Hours Section */}
+        <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-12">
+          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
+            Volunteer & Service Hours
+          </h2>
+          <p className="text-text-secondary mb-6">
+            If you are a student seeking volunteer service hours, we welcome your involvement. The American Adages Society offers structured opportunities in research, documentation, outreach, digital archiving, and event support. Contact us to learn more about available roles and how your participation may qualify for service credit through your institution.
+          </p>
+          <a
+            href="/contact"
+            className="inline-block px-6 py-3 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors font-medium"
+          >
+            Contact Us for Volunteer Opportunities
           </a>
         </section>
 

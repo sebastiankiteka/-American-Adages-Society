@@ -5,17 +5,15 @@ import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import DarkModeToggle from './DarkModeToggle'
-
-const SearchModal = dynamic(() => import('./SearchModal'), {
-  ssr: false,
-})
 
 function NotificationBadge() {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
+    // Only run on client
+    if (typeof window === 'undefined') return
+
     const fetchCounts = async () => {
       try {
         const response = await fetch('/api/users/notifications/counts')
@@ -34,7 +32,11 @@ function NotificationBadge() {
     return () => clearInterval(interval)
   }, [])
 
-  if (count === 0) return null
+  // Always render same structure - return null on server and client initially
+  // Badge will appear after useEffect runs on client
+  if (count === 0) {
+    return null
+  }
 
   return (
     <span className="absolute top-0 right-0 bg-accent-primary text-text-inverse text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -49,8 +51,21 @@ export default function Navigation() {
   const [transparencyOpen, setTransparencyOpen] = useState(false)
   const [exploreOpen, setExploreOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [SearchModal, setSearchModal] = useState<React.ComponentType<{ isOpen: boolean; onClose: () => void }> | null>(null)
   const { data: session, status } = useSession()
   const pathname = usePathname()
+
+  // Ensure consistent server/client render - only show session-dependent UI after mount
+  useEffect(() => {
+    setMounted(true)
+    // Lazy load SearchModal only on client
+    if (typeof window !== 'undefined') {
+      import('./SearchModal').then((mod) => {
+        setSearchModal(() => mod.default)
+      })
+    }
+  }, [])
   
   const exploreRef = useRef<HTMLDivElement>(null)
   const aboutRef = useRef<HTMLDivElement>(null)
@@ -59,10 +74,28 @@ export default function Navigation() {
   // Close mobile menu on route change
   useEffect(() => {
     setIsOpen(false)
+    setExploreOpen(false)
+    setAboutOpen(false)
+    setTransparencyOpen(false)
   }, [pathname])
 
-  // Close dropdowns on Escape key
+  // Prevent body scroll when mobile menu is open - only run on client
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow || 'unset'
+      }
+    }
+  }, [isOpen])
+
+  // Close dropdowns on Escape key - only run on client
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setExploreOpen(false)
@@ -78,27 +111,35 @@ export default function Navigation() {
     }
   }, [])
 
+  // Click outside handler - only run on client
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exploreRef.current && !exploreRef.current.contains(event.target as Node)) {
+    if (typeof window === 'undefined') return
+    
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (exploreRef.current && !exploreRef.current.contains(target)) {
         setExploreOpen(false)
       }
-      if (aboutRef.current && !aboutRef.current.contains(event.target as Node)) {
+      if (aboutRef.current && !aboutRef.current.contains(target)) {
         setAboutOpen(false)
       }
-      if (transparencyRef.current && !transparencyRef.current.contains(event.target as Node)) {
+      if (transparencyRef.current && !transparencyRef.current.contains(target)) {
         setTransparencyOpen(false)
       }
     }
 
+    // Listen to both mouse and touch events for better mobile support
     document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [])
 
   const exploreLinks = [
     { href: '/archive', label: 'Archive' },
+    { href: '/idioms', label: 'Idioms' },
     { href: '/blog', label: 'Blog' },
     { href: '/forum', label: 'Forum' },
     { href: '/events', label: 'Events' },
@@ -325,7 +366,8 @@ export default function Navigation() {
             
             <DarkModeToggle />
             
-            {status === 'loading' ? (
+            {/* Always render same structure - server and client must match */}
+            {!mounted || status === 'loading' ? (
               <div className="w-20 h-6"></div>
             ) : session ? (
               <div className="flex items-center gap-3">
@@ -368,7 +410,8 @@ export default function Navigation() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
-            {status === 'authenticated' && session && (
+            {/* Always render same structure - server and client must match */}
+            {mounted && status === 'authenticated' && session && (
               <Link
                 href="/profile/inbox"
                 className="hover:text-accent-primary transition-colors text-sm font-medium p-2 relative inline-block"
@@ -433,7 +476,8 @@ export default function Navigation() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
-            {status === 'loading' ? (
+            {/* Always render same structure - server and client must match */}
+            {!mounted || status === 'loading' ? (
               <div className="w-16 h-4"></div>
             ) : session ? (
               <Link
@@ -453,9 +497,10 @@ export default function Navigation() {
           </div>
 
           <button
-            className="md:hidden p-2 rounded-md hover:bg-card-bg-muted transition-colors"
+            className="md:hidden p-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
+            aria-expanded={isOpen}
           >
             <svg
               className="h-6 w-6"
@@ -476,12 +521,26 @@ export default function Navigation() {
         </div>
 
         {isOpen && (
-          <div className="md:hidden pb-4">
-            <div className="flex flex-col space-y-4">
+          <>
+            {/* Backdrop overlay - positioned outside nav to ensure proper z-index */}
+            <div
+              className="fixed inset-0 bg-black/50 z-[45] md:hidden"
+              onClick={() => setIsOpen(false)}
+              onTouchStart={(e) => {
+                // Close on touch outside
+                if (e.target === e.currentTarget) {
+                  setIsOpen(false)
+                }
+              }}
+              aria-hidden="true"
+            />
+            {/* Mobile menu */}
+            <div className="md:hidden pb-4 relative z-[60] bg-nav-bg">
+              <div className="flex flex-col space-y-4">
               <div className="space-y-2">
                 <Link
                   href="/"
-                  className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors font-medium"
+                  className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors font-medium touch-manipulation mobile-touch-target"
                   onClick={() => setIsOpen(false)}
                 >
                   Home
@@ -489,12 +548,12 @@ export default function Navigation() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs uppercase text-text-inverse/60 font-semibold px-3">Explore</p>
+                <p className="text-xs uppercase text-text-inverse/60 font-semibold px-3 py-2">Explore</p>
                 {exploreLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                    className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                     onClick={() => setIsOpen(false)}
                   >
                     {link.label}
@@ -503,12 +562,12 @@ export default function Navigation() {
               </div>
 
               <div className="space-y-2 border-t border-text-inverse/20 pt-2">
-                <p className="text-xs uppercase text-text-inverse/60 font-semibold px-3">About</p>
+                <p className="text-xs uppercase text-text-inverse/60 font-semibold px-3 py-2">About</p>
                 {aboutLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                    className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                     onClick={() => setIsOpen(false)}
                   >
                     {link.label}
@@ -519,7 +578,7 @@ export default function Navigation() {
               <div className="space-y-2 border-t border-text-inverse/20 pt-2">
                 <Link
                   href="/transparency"
-                  className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors font-medium"
+                  className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors font-medium touch-manipulation mobile-touch-target"
                   onClick={() => setIsOpen(false)}
                 >
                   Transparency
@@ -529,7 +588,7 @@ export default function Navigation() {
                     <Link
                       key={subsection.href}
                       href={subsection.href}
-                      className="block px-3 py-1.5 rounded-md hover:bg-card-bg-muted transition-colors text-sm text-text-inverse/80"
+                      className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors text-sm text-text-inverse/80 touch-manipulation mobile-touch-target"
                       onClick={() => setIsOpen(false)}
                     >
                       {subsection.label}
@@ -541,7 +600,7 @@ export default function Navigation() {
               <div className="space-y-2 border-t border-text-inverse/20 pt-2">
                 <Link
                   href="/contact"
-                  className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                  className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                   onClick={() => setIsOpen(false)}
                 >
                   Contact
@@ -553,7 +612,7 @@ export default function Navigation() {
                   href="https://utexas.campuslabs.com/engage/organization/americanadagessociety"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors flex items-center gap-1"
+                  className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors flex items-center gap-1 touch-manipulation mobile-touch-target"
                   onClick={() => setIsOpen(false)}
                 >
                   HornsLink
@@ -568,7 +627,7 @@ export default function Navigation() {
                   setIsOpen(false)
                   setSearchOpen(true)
                 }}
-                className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors flex items-center gap-2"
+                className="block w-full text-left px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors flex items-center gap-2 touch-manipulation mobile-touch-target"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -576,13 +635,14 @@ export default function Navigation() {
                 Search
               </button>
 
-              {status !== 'loading' && (
+              {/* Always render same structure - server and client must match */}
+              {mounted && status !== 'loading' && (
                 <div className="pt-4 border-t border-border-medium mt-2">
                   {session ? (
                     <div className="flex flex-col space-y-2">
                       <Link
                         href="/profile"
-                        className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                        className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                         onClick={() => setIsOpen(false)}
                       >
                         Account
@@ -592,7 +652,7 @@ export default function Navigation() {
                           setIsOpen(false)
                           signOut({ callbackUrl: '/' })
                         }}
-                        className="block w-full text-left px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                        className="block w-full text-left px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                       >
                         Logout
                       </button>
@@ -601,14 +661,14 @@ export default function Navigation() {
                     <div className="flex flex-col space-y-2">
                       <Link
                         href="/login"
-                        className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                        className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                         onClick={() => setIsOpen(false)}
                       >
                         Login
                       </Link>
                       <Link
                         href="/register"
-                        className="block px-3 py-2 rounded-md hover:bg-card-bg-muted transition-colors"
+                        className="block px-3 py-3 rounded-md hover:bg-card-bg-muted active:bg-card-bg-muted transition-colors touch-manipulation mobile-touch-target"
                         onClick={() => setIsOpen(false)}
                       >
                         Register
@@ -617,12 +677,13 @@ export default function Navigation() {
                   )}
                 </div>
               )}
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
 
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      {mounted && SearchModal && <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />}
     </nav>
   )
 }

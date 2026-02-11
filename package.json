@@ -14,25 +14,29 @@
     "add-sample-data": "node scripts/add-sample-data-direct.js",
     "update-adages": "node scripts/update-adages-with-first-known-use.js",
     "add-missing-adages": "node scripts/add-missing-adages.js",
+    "backfill-views": "node scripts/backfill-views-count.js",
+    "backfill-unique-visitors": "node scripts/backfill-unique-visitors.js",
+    "diagnose-views": "node scripts/diagnose-views.js",
     "clear-cache": "powershell -ExecutionPolicy Bypass -File scripts/clear-cache.ps1"
   },
   "dependencies": {
-    "next": "14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "@supabase/supabase-js": "^2.39.0",
-    "next-auth": "^5.0.0-beta.4",
     "bcryptjs": "^2.4.3",
-    "nodemailer": "^7.0.7",
     "date-fns": "^3.0.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "next": "^14.2.35",
+    "next-auth": "^5.0.0-beta.4",
+    "next-themes": "^0.4.6",
+    "nodemailer": "^7.0.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
+    "@types/nodemailer": "^7.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/nodemailer": "^7.0.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
@@ -42,4 +46,3 @@
     "node": "24.x"
   }
 }
-

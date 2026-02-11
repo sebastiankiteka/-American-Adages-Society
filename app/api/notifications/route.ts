@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
 
 // GET /api/notifications - Get current user's notifications
@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const unreadOnly = searchParams.get('unread') === 'true'
 
-    let query = supabase
+    // Use supabaseAdmin to bypass RLS for server-side queries
+    // User authentication is already verified above
+    let query = supabaseAdmin
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
@@ -49,6 +51,15 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

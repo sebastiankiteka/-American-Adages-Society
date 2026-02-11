@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
 
 // POST /api/notifications/[id]/read - Mark notification as read
@@ -19,12 +19,12 @@ export async function POST(
 
     const { id } = params
 
-    // Verify ownership
-    const { data: notification } = await supabase
+    // Verify ownership - use supabaseAdmin to bypass RLS
+    const { data: notification } = await supabaseAdmin
       .from('notifications')
       .select('user_id')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
     if (!notification || notification.user_id !== user.id) {
       return NextResponse.json<ApiResponse>({
@@ -33,8 +33,8 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Mark as read
-    const { error } = await supabase
+    // Mark as read - use supabaseAdmin to bypass RLS
+    const { error } = await supabaseAdmin
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .eq('id', id)
@@ -57,6 +57,15 @@ export async function POST(
     }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 
