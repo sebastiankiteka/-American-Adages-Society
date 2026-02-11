@@ -126,10 +126,9 @@ export async function PUT(
     const { id } = params
     const body = await request.json()
 
-    // Add updated_by to track who made the change
-    const updateData = {
+    // updated_by column may not exist on adages; only set updated_at for cache/trigger
+    const updateData: Record<string, unknown> = {
       ...body,
-      updated_by: user.id,
       updated_at: new Date().toISOString(),
     }
 

@@ -1,6 +1,6 @@
 // API route to get notification counts for user
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
 
 // GET /api/users/notifications/counts - Get notification counts

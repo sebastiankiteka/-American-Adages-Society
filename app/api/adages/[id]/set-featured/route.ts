@@ -1,6 +1,6 @@
 // API route to set an adage as featured (and unfeature others)
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin, ApiResponse } from '@/lib/api-helpers'
 
 // POST /api/adages/[id]/set-featured - Set adage as featured and unfeature others
@@ -15,7 +15,7 @@ export async function POST(
     const { featured_until, reason } = body
 
     // First, unfeature all other adages (only if setting a new one as featured)
-    const { error: unfeatureError } = await supabase
+    const { error: unfeatureError } = await supabaseAdmin
       .from('adages')
       .update({ featured: false })
       .neq('id', id)
@@ -38,12 +38,12 @@ export async function POST(
       featured_until: featured_until || sevenDaysLater.toISOString(),
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('adages')
       .update(updateData)
       .eq('id', id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       return NextResponse.json<ApiResponse>({
@@ -52,8 +52,15 @@ export async function POST(
       }, { status: 400 })
     }
 
+    if (!data) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Adage not found',
+      }, { status: 404 })
+    }
+
     // Record in featured history
-    const { error: historyError } = await supabase
+    const { error: historyError } = await supabaseAdmin
       .from('featured_adages_history')
       .insert({
         adage_id: id,
