@@ -8,3 +8,15 @@ COMMENT ON COLUMN adage_timeline.primary_location IS 'Primary geographic locatio
 COMMENT ON COLUMN adage_timeline.geographic_changes IS 'Description of geographic spread changes during this period (e.g., "Spread from England to American colonies", "Became popular in urban areas")';
 
 
+
+
+
+
+
+
+
+
+
+
+
+

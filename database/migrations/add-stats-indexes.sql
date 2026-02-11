@@ -42,3 +42,15 @@ CREATE INDEX IF NOT EXISTS idx_votes_forum_thread_target ON votes(target_type, t
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

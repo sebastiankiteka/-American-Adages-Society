@@ -15,3 +15,15 @@ CREATE INDEX IF NOT EXISTS idx_saved_adages_adage ON saved_adages(adage_id) WHER
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

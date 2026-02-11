@@ -7,3 +7,15 @@ ADD COLUMN IF NOT EXISTS email_inbox_only BOOLEAN DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_users_email_inbox_only ON users(email_inbox_only) WHERE email_inbox_only = TRUE AND deleted_at IS NULL;
 
 
+
+
+
+
+
+
+
+
+
+
+
+

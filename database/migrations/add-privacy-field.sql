@@ -3,3 +3,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_private BOOLEAN DEFAULT FALSE
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

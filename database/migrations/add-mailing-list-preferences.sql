@@ -32,3 +32,15 @@ CREATE INDEX IF NOT EXISTS idx_users_email_archive_additions ON users(email_arch
 CREATE INDEX IF NOT EXISTS idx_users_email_comment_notifications ON users(email_comment_notifications) WHERE email_comment_notifications = TRUE AND deleted_at IS NULL;
 
 
+
+
+
+
+
+
+
+
+
+
+
+

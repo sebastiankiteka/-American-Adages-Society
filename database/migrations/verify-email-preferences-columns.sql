@@ -24,3 +24,15 @@ ORDER BY column_name;
 -- - database/migrations/add-inbox-only-notifications.sql (for email_inbox_only)
 
 
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,6 +33,14 @@ export default function AdminAdagesPage() {
   const [expandedAdageId, setExpandedAdageId] = useState<string | null>(null)
   const [selectedAdages, setSelectedAdages] = useState<Set<string>>(new Set())
   const [bulkAction, setBulkAction] = useState<'delete' | 'feature' | 'unfeature' | null>(null)
+  const [showFeatureModal, setShowFeatureModal] = useState(false)
+  const [featureAdageId, setFeatureAdageId] = useState<string | null>(null)
+  const [featureReason, setFeatureReason] = useState('')
+  const [featureUntil, setFeatureUntil] = useState('')
+  const [featureError, setFeatureError] = useState('')
+  const [featureSaving, setFeatureSaving] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteAdageId, setDeleteAdageId] = useState<string | null>(null)
   const router = useRouter()
 
   // Check authentication
@@ -155,28 +163,37 @@ export default function AdminAdagesPage() {
     setShowAddForm(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this adage?')) return
+  const openDeleteModal = (id: string) => {
+    setDeleteAdageId(id)
+    setShowDeleteModal(true)
+  }
 
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false)
+    setDeleteAdageId(null)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteAdageId) return
     try {
-      const response = await fetch(`/api/adages/${id}`, {
+      const response = await fetch(`/api/adages/${deleteAdageId}`, {
         method: 'DELETE',
       })
-
       const result: ApiResponse = await response.json()
-
       if (result.success) {
-        // Refresh the list
         const refreshResponse = await fetch('/api/adages')
         const refreshResult: ApiResponse<Adage[]> = await refreshResponse.json()
         if (refreshResult.success && refreshResult.data) {
           setAdages(refreshResult.data)
         }
+        closeDeleteModal()
       } else {
         setError(result.error || 'Failed to delete adage')
+        closeDeleteModal()
       }
     } catch (err: any) {
       setError(err.message || 'Failed to delete adage')
+      closeDeleteModal()
     }
   }
 
@@ -202,6 +219,56 @@ export default function AdminAdagesPage() {
       setSelectedAdages(new Set())
     } else {
       setSelectedAdages(new Set(adages.map(a => a.id)))
+    }
+  }
+
+  const openFeatureModal = (adageId: string) => {
+    setFeatureAdageId(adageId)
+    setFeatureReason('')
+    setFeatureUntil('')
+    setFeatureError('')
+    setShowFeatureModal(true)
+  }
+
+  const closeFeatureModal = () => {
+    setShowFeatureModal(false)
+    setFeatureAdageId(null)
+    setFeatureReason('')
+    setFeatureUntil('')
+    setFeatureError('')
+  }
+
+  const handleFeatureConfirm = async () => {
+    if (!featureAdageId) return
+    try {
+      setFeatureSaving(true)
+      setFeatureError('')
+      const featuredUntilIso = featureUntil
+        ? new Date(featureUntil + 'T23:59:59.999Z').toISOString()
+        : undefined
+      const response = await fetch(`/api/adages/${featureAdageId}/set-featured`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: featureReason.trim() || undefined,
+          featured_until: featuredUntilIso,
+        }),
+      })
+      const result: ApiResponse = await response.json()
+      if (result.success) {
+        const refreshResponse = await fetch('/api/adages')
+        const refreshResult: ApiResponse<Adage[]> = await refreshResponse.json()
+        if (refreshResult.success && refreshResult.data) {
+          setAdages(refreshResult.data)
+        }
+        closeFeatureModal()
+      } else {
+        setFeatureError(result.error || 'Failed to set featured adage')
+      }
+    } catch (err: any) {
+      setFeatureError(err.message || 'Failed to set featured adage')
+    } finally {
+      setFeatureSaving(false)
     }
   }
 
@@ -578,36 +645,7 @@ export default function AdminAdagesPage() {
                       <div className="flex gap-2 ml-4">
                         {!adage.featured && (
                           <button
-                            onClick={async () => {
-                              const reason = prompt('Why is this adage being featured? (Optional reason)')
-                              if (reason === null) return
-                              
-                              const featuredUntil = prompt('Featured until (YYYY-MM-DD format, or leave empty for permanent):')
-                              if (featuredUntil === null) return
-                              
-                              try {
-                                const response = await fetch(`/api/adages/${adage.id}/set-featured`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    reason: reason || undefined,
-                                    featured_until: featuredUntil || undefined,
-                                  }),
-                                })
-                                const result: ApiResponse = await response.json()
-                                if (result.success) {
-                                  const refreshResponse = await fetch('/api/adages')
-                                  const refreshResult: ApiResponse<Adage[]> = await refreshResponse.json()
-                                  if (refreshResult.success && refreshResult.data) {
-                                    setAdages(refreshResult.data)
-                                  }
-                                } else {
-                                  alert(result.error || 'Failed to set featured adage')
-                                }
-                              } catch (err: any) {
-                                alert(err.message || 'Failed to set featured adage')
-                              }
-                            }}
+                            onClick={() => openFeatureModal(adage.id)}
                             className="px-4 py-2 bg-success-text text-text-inverse rounded-lg hover:bg-success-text/90 transition-colors text-sm"
                           >
                             Set as Featured
@@ -620,7 +658,7 @@ export default function AdminAdagesPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(adage.id)}
+                          onClick={() => openDeleteModal(adage.id)}
                           className="px-4 py-2 bg-error-bg text-error-text rounded-lg hover:bg-error-text/20 transition-colors text-sm border border-error-text/30"
                         >
                           Delete
@@ -651,6 +689,114 @@ export default function AdminAdagesPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Feature Adage Modal */}
+        {showFeatureModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={(e) => e.target === e.currentTarget && closeFeatureModal()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feature-modal-title"
+          >
+            <div
+              className="bg-card-bg border border-border-medium rounded-lg shadow-lg max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="feature-modal-title" className="text-xl font-bold font-serif text-text-primary mb-4">
+                Set as Featured Adage
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="feature-reason" className="block text-sm font-medium text-text-primary mb-2">
+                    Reason (optional)
+                  </label>
+                  <input
+                    id="feature-reason"
+                    type="text"
+                    value={featureReason}
+                    onChange={(e) => setFeatureReason(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg-muted text-text-primary"
+                    placeholder="Why is this adage being featured?"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="feature-until" className="block text-sm font-medium text-text-primary mb-2">
+                    Featured until
+                  </label>
+                  <input
+                    id="feature-until"
+                    type="date"
+                    value={featureUntil}
+                    onChange={(e) => setFeatureUntil(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-border-medium focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 bg-card-bg-muted text-text-primary"
+                  />
+                  <p className="text-xs text-text-metadata mt-1">Leave empty for permanent or use default (7 days)</p>
+                </div>
+                {featureError && (
+                  <div className="bg-error-bg border border-error-text/30 text-error-text px-4 py-3 rounded-lg text-sm">
+                    {featureError}
+                  </div>
+                )}
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={closeFeatureModal}
+                    disabled={featureSaving}
+                    className="px-4 py-2 bg-card-bg-muted text-text-primary rounded-lg hover:bg-card-bg border border-border-medium transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFeatureConfirm}
+                    disabled={featureSaving}
+                    className="px-4 py-2 bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50"
+                  >
+                    {featureSaving ? 'Saving...' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation modal */}
+        {showDeleteModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={(e) => e.target === e.currentTarget && closeDeleteModal()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+          >
+            <div
+              className="bg-card-bg border border-border-medium rounded-lg shadow-lg max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="delete-modal-title" className="text-xl font-bold font-serif text-text-primary mb-4">
+                Delete adage?
+              </h2>
+              <p className="text-text-secondary mb-6">Are you sure you want to delete this adage? This cannot be undone.</p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2 bg-card-bg-muted text-text-primary rounded-lg hover:bg-card-bg border border-border-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-error-bg text-error-text rounded-lg hover:bg-error-text/20 transition-colors border border-error-text/30"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

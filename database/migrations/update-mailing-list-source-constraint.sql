@@ -11,3 +11,15 @@ ADD CONSTRAINT mailing_list_source_check
 CHECK (source IN ('contact', 'signup', 'forum', 'profile'));
 
 
+
+
+
+
+
+
+
+
+
+
+
+

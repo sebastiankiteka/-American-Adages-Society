@@ -412,3 +412,15 @@ NEXT_PUBLIC_ERROR_LOGGING_SERVICE
 **Critical Path:** Database migrations → Environment variables → Deploy → Test → Domain setup
 
 
+
+
+
+
+
+
+
+
+
+
+
+

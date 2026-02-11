@@ -20,3 +20,15 @@ CREATE INDEX IF NOT EXISTS idx_documents_published ON documents(published) WHERE
 CREATE INDEX IF NOT EXISTS idx_documents_order ON documents(order_index) WHERE deleted_at IS NULL;
 
 
+
+
+
+
+
+
+
+
+
+
+
+

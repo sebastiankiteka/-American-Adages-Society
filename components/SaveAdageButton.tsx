@@ -184,3 +184,15 @@ export default function SaveAdageButton({ adageId, onSaved }: SaveAdageButtonPro
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

@@ -8,3 +8,15 @@ CHECK (type IN ('report_accepted', 'report_rejected', 'report_warning', 'comment
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
