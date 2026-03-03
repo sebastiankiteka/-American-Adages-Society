@@ -1,13 +1,21 @@
 'use client'
 
-// Renders the current date in the user's locale. Used on the homepage so the date
-// is always correct (client-side), avoiding static build or cache showing an old date.
+import { useEffect, useState } from 'react'
+
+// Renders the current date only after mount. Server sends an empty span so no
+// static or cached date (e.g. February 11, 2026) can appear in the initial HTML.
 export default function CurrentDate() {
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-  return <span>{today}</span>
+  const [date, setDate] = useState('')
+
+  useEffect(() => {
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    setDate(today)
+  }, [])
+
+  return <span>{date}</span>
 }
