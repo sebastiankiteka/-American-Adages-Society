@@ -20,7 +20,7 @@
     "clear-cache": "powershell -ExecutionPolicy Bypass -File scripts/clear-cache.ps1"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.97.0",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.0.0",
     "dotenv": "^16.3.1",

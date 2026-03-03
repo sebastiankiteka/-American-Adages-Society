@@ -33,11 +33,25 @@ export async function GET(request: NextRequest) {
         .eq('target_type', 'forum_thread'),
     ])
 
-    // Get adages count - ALL TIME
-    const { count: adagesCount } = await supabaseAdmin
-      .from('adages')
-      .select('*', { count: 'exact', head: true })
-      .is('deleted_at', null)
+    // Get adages count: use site_metrics (kept in sync by DB trigger) so dashboard matches Archive
+    let adagesCount: number | null = null
+    const { data: metricsRow } = await supabaseAdmin
+      .from('site_metrics')
+      .select('value')
+      .eq('key', 'total_adages')
+      .maybeSingle()
+    if (metricsRow != null && metricsRow.value != null) {
+      adagesCount = Number(metricsRow.value)
+    }
+    // Fallback: live count (same visibility as Archive: deleted_at and hidden_at null)
+    if (adagesCount == null) {
+      const { count: liveCount } = await supabaseAdmin
+        .from('adages')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .is('hidden_at', null)
+      adagesCount = liveCount ?? 0
+    }
 
     // Get unique visitors stats - try view first, fallback to direct query
     let uniqueVisitorStats: any = null

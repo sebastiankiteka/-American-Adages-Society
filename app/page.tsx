@@ -3,15 +3,9 @@ import Image from 'next/image'
 import WeeklyAdage from '@/components/WeeklyAdage'
 import MailingListSignup from '@/components/MailingListSignup'
 import BackToTop from '@/components/BackToTop'
+import CurrentDate from '@/components/CurrentDate'
 
 export default function Home() {
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -49,7 +43,7 @@ export default function Home() {
             preserving and interpreting adages as cultural artifacts.
           </p>
           <p className="text-xs text-text-metadata mt-4 text-center">
-            {today}
+            <CurrentDate />
           </p>
         </div>
       </section>
