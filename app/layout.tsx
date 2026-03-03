@@ -94,15 +94,6 @@ export default function RootLayout({
             </SessionProvider>
           </ErrorBoundary>
         </ThemeProvider>
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator && typeof window !== 'undefined') {
-              window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(() => {});
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   )
