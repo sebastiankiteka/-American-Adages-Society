@@ -15,6 +15,7 @@ import ShareButtons from '@/components/ShareButtons'
 import ReadingProgress from '@/components/ReadingProgress'
 import { analytics } from '@/lib/analytics'
 import { format } from 'date-fns'
+import { filterPublicTags } from '@/lib/tag-facets'
 
 interface ApiResponse<T = any> {
   success: boolean
@@ -120,6 +121,8 @@ export default function AdageDetail({ params }: { params: { id: string } }) {
     )
   }
 
+  const publicTags = filterPublicTags(adage.tags)
+
   return (
     <div className="min-h-screen bg-card-bg-muted py-12 px-4">
       <ReadingProgress />
@@ -209,11 +212,11 @@ export default function AdageDetail({ params }: { params: { id: string } }) {
               </section>
             )}
 
-            {adage.tags && adage.tags.length > 0 && (
+            {publicTags.length > 0 && (
               <section>
                 <h2 className="text-2xl font-bold font-serif text-text-primary mb-3">Tags</h2>
                 <div className="flex flex-wrap gap-2">
-                  {adage.tags.map((tag) => (
+                  {publicTags.map((tag) => (
                     <span
                       key={tag}
                       className="px-3 py-1 bg-card-bg-muted text-text-secondary rounded-full text-sm"

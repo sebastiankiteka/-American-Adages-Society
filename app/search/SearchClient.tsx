@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { filterPublicTags } from '@/lib/tag-facets'
 
 interface SearchResult {
   type: 'adage' | 'blog' | 'user' | 'event'
@@ -91,13 +92,11 @@ export default function SearchClient() {
           
           // Collect tags for filter
           adageResults.forEach(result => {
-            if (result.tags) {
-              result.tags.forEach(tag => {
-                if (!availableTags.includes(tag)) {
-                  setAvailableTags(prev => [...prev, tag].sort())
-                }
-              })
-            }
+            filterPublicTags(result.tags).forEach(tag => {
+              if (!availableTags.includes(tag)) {
+                setAvailableTags(prev => [...prev, tag].sort())
+              }
+            })
           })
         }
       }
@@ -441,9 +440,9 @@ export default function SearchClient() {
                           {result.subtitle && (
                             <p className="text-text-secondary mb-2 line-clamp-2">{result.subtitle}</p>
                           )}
-                          {result.tags && result.tags.length > 0 && (
+                          {filterPublicTags(result.tags).length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {result.tags.map(tag => (
+                              {filterPublicTags(result.tags).map(tag => (
                                 <span
                                   key={tag}
                                   className="px-2 py-1 bg-card-bg-muted text-text-metadata rounded text-xs border border-border-medium"

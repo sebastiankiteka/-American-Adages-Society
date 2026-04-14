@@ -51,24 +51,24 @@ export default function RelatedBlogPosts({ currentPostId, tags }: RelatedBlogPos
   if (loading || relatedPosts.length === 0) return null
 
   return (
-    <section className="mt-12 bg-white p-8 rounded-lg shadow-sm border border-soft-gray">
-      <h2 className="text-2xl font-bold font-serif text-charcoal mb-6">Related Posts</h2>
+    <section className="mt-12 rounded-lg border border-border-medium bg-card-bg p-8 shadow-sm">
+      <h2 className="mb-6 font-serif text-2xl font-bold text-text-primary">Related Posts</h2>
       <div className="space-y-4">
         {relatedPosts.map((post) => (
           <Link
             key={post.id}
             href={`/blog/${post.slug || post.id}`}
-            className="block p-4 bg-cream rounded-lg border border-soft-gray hover:border-bronze transition-colors group"
+            className="group block rounded-lg border border-border-medium bg-card-bg-muted p-4 transition-colors hover:border-accent-primary"
           >
-            <h3 className="text-lg font-semibold text-charcoal group-hover:text-bronze transition-colors mb-2">
+            <h3 className="mb-2 text-lg font-semibold text-text-primary transition-colors group-hover:text-accent-primary">
               {post.title}
             </h3>
             {post.excerpt && (
-              <p className="text-sm text-charcoal-light mb-2 line-clamp-2">
+              <p className="mb-2 line-clamp-2 text-sm text-text-secondary">
                 {post.excerpt}
               </p>
             )}
-            <p className="text-xs text-charcoal-light">
+            <p className="text-xs text-text-metadata">
               {format(new Date(post.published_at || post.created_at), 'MMMM d, yyyy')}
             </p>
           </Link>

@@ -27,7 +27,7 @@ interface AnalyticsData {
 export default function Agenda() {
   const [progress, setProgress] = useState<ProgressData>({
     adagesCount: 0,
-    adagesGoal: 100,
+    adagesGoal: 250,
     totalViews: 0,
     viewsGoal: 1000,
     uniqueVisitors: 0,
@@ -47,7 +47,7 @@ export default function Agenda() {
           
           setProgress({
             adagesCount: data.adagesCount,
-            adagesGoal: 100, // Goal for Fall 2026
+            adagesGoal: 250, // Next archive expansion target
             totalViews: data.totalViews, // Total views across all content types
             viewsGoal: 1000, // Initial goal
             uniqueVisitors: 0, // Not displayed publicly
@@ -76,9 +76,12 @@ export default function Agenda() {
 
         {/* Progress Tracking */}
         <section className="bg-card-bg p-8 md:p-12 rounded-lg shadow-sm border border-border-medium mb-8">
-          <h2 className="text-3xl font-bold font-serif mb-6 text-text-primary">
+          <h2 className="text-3xl font-bold font-serif mb-2 text-text-primary">
             Progress Tracking
           </h2>
+          <p className="text-sm text-text-metadata mb-6">
+            Progress tracking for archive expansion
+          </p>
           
           {loading ? (
             <p className="text-text-metadata">Loading progress...</p>
@@ -86,8 +89,16 @@ export default function Agenda() {
             <div className="space-y-6">
               {/* Adages Progress */}
               <div>
+                {progress.adagesCount >= 100 && (
+                  <div className="mb-4 pl-3 border-l-2 border-border-medium text-text-primary">
+                    <p className="text-sm font-medium">100 adages reached</p>
+                    <p className="text-sm text-text-metadata mt-1">
+                      Next archive goal: 250 adages
+                    </p>
+                  </div>
+                )}
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xl font-semibold text-text-primary">Archive Expansion</h3>
+                  <h3 className="text-xl font-semibold text-text-primary">Archive expansion</h3>
                   <span className="text-text-metadata">
                     {progress.adagesCount} / {progress.adagesGoal} adages
                   </span>
@@ -99,7 +110,7 @@ export default function Agenda() {
                   ></div>
                 </div>
                 <p className="text-sm text-text-metadata mt-2">
-                  Goal: {progress.adagesGoal} adages by Fall 2026
+                  Progress toward the next archive goal of {progress.adagesGoal} adages
                 </p>
               </div>
 
@@ -136,7 +147,8 @@ export default function Agenda() {
               <span className="text-accent-primary text-2xl mr-4">•</span>
               <p className="text-lg">
                 <strong className="text-text-primary">Expand the Archive:</strong> Build a comprehensive, 
-                searchable database of American adages with detailed definitions, origins, and cultural context.
+                searchable database of American adages with detailed definitions, origins, and cultural context. 
+                The archive has reached 100 adages; the next target is 250.
               </p>
             </div>
             <div className="flex items-start">
@@ -211,7 +223,7 @@ export default function Agenda() {
                 Fall 2026
               </h3>
               <ul className="list-disc list-inside space-y-1 text-text-primary ml-4">
-                <li>Expand archive to 100+ adages</li>
+                <li>Continue archive expansion toward 250 adages (100 reached)</li>
                 <li>Host guest speaker series</li>
                 <li>Establish partnerships with academic departments</li>
                 <li>Launch community outreach initiatives</li>

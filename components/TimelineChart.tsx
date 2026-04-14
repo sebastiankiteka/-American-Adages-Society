@@ -64,21 +64,21 @@ export default function TimelineChart({ timeline }: TimelineChartProps) {
 
   return (
     <div className="w-full">
-      <div className="relative bg-cream p-6 rounded-lg border border-soft-gray">
+      <div className="relative rounded-lg border border-border-medium bg-card-bg p-6">
         {/* Timeline Bar */}
-        <div className="relative h-32 mb-8">
+        <div className="relative mb-8 h-32">
           {/* Year markers */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-charcoal/20"></div>
+          <div className="absolute left-0 right-0 top-0 h-1 bg-border-medium/80 dark:bg-border-medium" />
           {yearMarkers.map((year) => {
             const position = getPosition(new Date(year, 0, 1))
             return (
               <div
                 key={year}
-                className="absolute top-0 transform -translate-x-1/2"
+                className="absolute top-0 -translate-x-1/2 transform"
                 style={{ left: `${position}%` }}
               >
-                <div className="w-0.5 h-4 bg-charcoal"></div>
-                <div className="text-xs text-charcoal-light mt-1 whitespace-nowrap transform -translate-x-1/2">
+                <div className="h-4 w-0.5 bg-text-primary/70" />
+                <div className="mt-1 -translate-x-1/2 transform whitespace-nowrap text-xs text-text-metadata">
                   {year}
                 </div>
               </div>
@@ -96,7 +96,7 @@ export default function TimelineChart({ timeline }: TimelineChartProps) {
             return (
               <div
                 key={period.id}
-                className="absolute top-4 rounded-lg border-2 border-white shadow-sm"
+                className="absolute top-4 rounded-lg border-2 border-card-bg shadow-sm dark:border-border-medium"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
@@ -113,33 +113,33 @@ export default function TimelineChart({ timeline }: TimelineChartProps) {
                     {!period.time_period_end && ' - Present'}
                   </div>
                   {period.primary_location && (
-                    <div className="text-xs text-white/80 text-center mt-1 truncate w-full px-1" title={period.primary_location}>
-                      📍 {period.primary_location}
+                    <div className="mt-1 w-full truncate px-1 text-center text-xs text-white/80" title={period.primary_location}>
+                      {period.primary_location}
                     </div>
                   )}
                   
                   {/* Tooltip on hover */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-                    <div className="bg-charcoal text-cream text-xs rounded-lg px-3 py-2 shadow-lg max-w-xs">
-                      <div className="font-semibold mb-1">{level.label}</div>
+                  <div className="absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 transform group-hover:block">
+                    <div className="max-w-xs rounded-lg border border-border-medium bg-card-bg px-3 py-2 text-xs text-text-primary shadow-lg">
+                      <div className="mb-1 font-semibold">{level.label}</div>
                       {period.primary_location && (
-                        <div className="mt-1 text-cream/90">
+                        <div className="mt-1 text-text-secondary">
                           <span className="font-semibold">Location:</span> {period.primary_location}
                         </div>
                       )}
                       {period.geographic_changes && (
-                        <div className="mt-1 text-cream/90">
+                        <div className="mt-1 text-text-secondary">
                           <span className="font-semibold">Changes:</span> {period.geographic_changes}
                         </div>
                       )}
-                      {period.notes && <div className="mt-1 max-w-xs">{period.notes}</div>}
+                      {period.notes && <div className="mt-1 max-w-xs text-text-secondary">{period.notes}</div>}
                       {period.sources && period.sources.length > 0 && (
-                        <div className="mt-1 text-cream/80">
+                        <div className="mt-1 text-text-metadata">
                           Sources: {period.sources.length}
                         </div>
                       )}
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                        <div className="border-4 border-transparent border-t-charcoal"></div>
+                      <div className="absolute bottom-0 left-1/2 translate-y-full -translate-x-1/2 transform">
+                        <div className="border-4 border-transparent border-t-border-medium" />
                       </div>
                     </div>
                   </div>
@@ -150,18 +150,18 @@ export default function TimelineChart({ timeline }: TimelineChartProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 justify-center mt-4 pt-4 border-t border-soft-gray">
+        <div className="mt-4 flex flex-wrap justify-center gap-4 border-t border-border-medium pt-4">
           {Object.entries(popularityLevels).map(([key, level]) => (
             <div key={key} className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded ${level.color}`}></div>
-              <span className="text-sm text-charcoal-light">{level.label}</span>
+              <div className={`h-4 w-4 rounded ${level.color}`} />
+              <span className="text-sm text-text-metadata">{level.label}</span>
             </div>
           ))}
         </div>
 
         {/* Detailed list (collapsible) */}
         <details className="mt-6">
-          <summary className="cursor-pointer text-bronze hover:text-bronze/80 font-semibold">
+          <summary className="cursor-pointer font-semibold text-accent-primary hover:text-accent-hover">
             View Detailed Timeline
           </summary>
           <div className="mt-4 space-y-3">
@@ -170,46 +170,54 @@ export default function TimelineChart({ timeline }: TimelineChartProps) {
               const startDate = new Date(period.time_period_start)
               const endDate = period.time_period_end ? new Date(period.time_period_end) : null
 
+              const popularityBadge =
+                period.popularity_level === 'ubiquitous'
+                  ? 'bg-success-bg text-success-text dark:bg-green-900/35 dark:text-green-200'
+                  : period.popularity_level === 'very_common'
+                    ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/35 dark:text-blue-200'
+                    : period.popularity_level === 'common'
+                      ? 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-100'
+                      : period.popularity_level === 'uncommon'
+                        ? 'bg-orange-100 text-orange-900 dark:bg-orange-900/35 dark:text-orange-100'
+                        : 'bg-card-bg-muted text-text-primary dark:bg-neutral-800 dark:text-neutral-200'
+
               return (
-                <div key={period.id} className="bg-white p-4 rounded-lg border border-soft-gray">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${level.color}`}></div>
-                      <span className="text-sm font-semibold text-charcoal">
+                <div
+                  key={period.id}
+                  className="rounded-lg border border-border-medium bg-card-bg-muted p-4 dark:bg-card-bg"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className={`h-3 w-3 rounded-full ${level.color}`} />
+                      <span className="text-sm font-semibold text-text-primary">
                         {format(startDate, 'yyyy')}
                         {endDate && ` - ${format(endDate, 'yyyy')}`}
                         {!endDate && ' - Present'}
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        period.popularity_level === 'ubiquitous' ? 'bg-green-100 text-green-800' :
-                        period.popularity_level === 'very_common' ? 'bg-blue-100 text-blue-800' :
-                        period.popularity_level === 'common' ? 'bg-yellow-100 text-yellow-800' :
-                        period.popularity_level === 'uncommon' ? 'bg-orange-100 text-orange-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${popularityBadge}`}>
                         {level.label}
                       </span>
                     </div>
                   </div>
                   {period.primary_location && (
                     <div className="mt-2">
-                      <p className="text-xs text-charcoal-light font-semibold mb-1">Primary Location:</p>
-                      <p className="text-sm text-charcoal">{period.primary_location}</p>
+                      <p className="mb-1 text-xs font-semibold text-text-metadata">Primary Location:</p>
+                      <p className="text-sm text-text-primary">{period.primary_location}</p>
                     </div>
                   )}
                   {period.geographic_changes && (
                     <div className="mt-2">
-                      <p className="text-xs text-charcoal-light font-semibold mb-1">Geographic Changes:</p>
-                      <p className="text-sm text-charcoal">{period.geographic_changes}</p>
+                      <p className="mb-1 text-xs font-semibold text-text-metadata">Geographic Changes:</p>
+                      <p className="text-sm text-text-primary">{period.geographic_changes}</p>
                     </div>
                   )}
                   {period.notes && (
-                    <p className="text-sm text-charcoal-light mt-2">{period.notes}</p>
+                    <p className="mt-2 text-sm text-text-secondary">{period.notes}</p>
                   )}
                   {period.sources && period.sources.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs text-charcoal-light font-semibold mb-1">Sources:</p>
-                      <ul className="text-xs text-charcoal-light list-disc list-inside">
+                      <p className="mb-1 text-xs font-semibold text-text-metadata">Sources:</p>
+                      <ul className="list-inside list-disc text-xs text-text-secondary">
                         {period.sources.map((source, idx) => (
                           <li key={idx}>{source}</li>
                         ))}

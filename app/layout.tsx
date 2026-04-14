@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import SessionProvider from '@/components/SessionProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PageViewTracker from '@/components/PageViewTracker'
+import ScrollToTop from '@/components/ScrollToTop'
 
 export const metadata: Metadata = {
   title: 'American Adages Society | Big Wisdom, small sentences.',
@@ -90,6 +91,7 @@ export default function RootLayout({
                 <Navigation />
               </Suspense>
               <main className="min-h-screen">{children}</main>
+              <ScrollToTop />
               <Footer />
             </SessionProvider>
           </ErrorBoundary>

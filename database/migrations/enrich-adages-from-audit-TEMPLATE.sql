@@ -1,0 +1,47 @@
+-- =============================================================================
+-- Phase 3 — Standardize partial/minimal adages (TEMPLATE — not bulk-filled yet)
+-- =============================================================================
+-- Run Phase 1 audit first: audit-adage-template-completeness.sql
+--
+-- Protected rows (do not rewrite aggressively unless doing small consistency fixes):
+--   '0d588e53-a308-420c-9088-2319635562e0'  -- reference template
+--   'b532f39d-cc87-49c5-ac55-b66cce81945a'  -- Better late than never
+--   'cbf39368-4a32-4114-a225-019b2a2222a5'  -- Where there's smoke, there's fire
+--   '9d5ea659-c316-4766-b681-9e5d25fc0475'  -- You can't have your cake and eat it too
+--   (Re-run audit after DB changes; full-set ids may change if criteria change.)
+--
+-- This file will hold UPDATE adages ... plus optional INSERTs into:
+--   adage_variants, adage_translations, related_adages, adage_usage_examples,
+--   adage_timeline, citations
+-- for each partial/minimal id, preserving existing variants and not duplicating canon.
+--
+-- Next step: copy this file to enrich-adages-from-audit.sql and fill per-id blocks,
+-- or generate batches by theme (e.g. English proverbs, Chinese-origin, etc.).
+-- =============================================================================
+
+-- Example pattern (commented — replace content and id before running):
+
+-- UPDATE adages SET
+--   definition = '...',
+--   origin = '...',
+--   etymology = '...',
+--   historical_context = '...',
+--   interpretation = '...',
+--   modern_practicality = '...',
+--   first_known_usage = '...',
+--   tags = ARRAY['archive', 'English', 'risk']::text[],
+--   updated_at = now()
+-- WHERE id = 'YOUR-UUID-HERE'
+--   AND id NOT IN (
+--     '0d588e53-a308-420c-9088-2319635562e0',
+--     'b532f39d-cc87-49c5-ac55-b66cce81945a',
+--     'cbf39368-4a32-4114-a225-019b2a2222a5',
+--     '9d5ea659-c316-4766-b681-9e5d25fc0475'
+--   );
+
+-- Example: official usage example (adjust id; use NULL created_by for official if allowed)
+-- INSERT INTO adage_usage_examples (adage_id, example_text, context, source_type, created_at)
+-- SELECT 'YOUR-UUID', 'Example sentence using the adage.', 'Modern informal context', 'official', now()
+-- WHERE NOT EXISTS (
+--   SELECT 1 FROM adage_usage_examples e WHERE e.adage_id = 'YOUR-UUID' AND e.deleted_at IS NULL LIMIT 1
+-- );

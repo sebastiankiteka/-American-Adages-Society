@@ -7,11 +7,26 @@ import AdageCard from '@/components/AdageCard'
 import { Adage } from '@/lib/db-types'
 import { AdageCardSkeleton } from '@/components/LoadingSkeleton'
 import BackToTop from '@/components/BackToTop'
+import {
+  filterPublicTags,
+  partitionTagsByFacet,
+} from '@/lib/tag-facets'
 
 interface ApiResponse<T = any> {
   success: boolean
   data?: T
   error?: string
+}
+
+/** User-facing count under the archive title. Always capitalize "Adages". */
+function formatArchiveAdageCountLine(
+  filtered: number,
+  total: number,
+  hasActiveFilters: boolean
+): string {
+  return hasActiveFilters
+    ? `${filtered} of ${total} Adages`
+    : `${total} Adages Collected`
 }
 
 export default function Archive() {
@@ -20,6 +35,7 @@ export default function Archive() {
   const [adages, setAdages] = useState<Adage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const hasActiveFilters = searchQuery.trim().length > 0 || selectedTag !== null
 
   useEffect(() => {
     const fetchAdages = async () => {
@@ -43,13 +59,13 @@ export default function Archive() {
     fetchAdages()
   }, [])
 
-  // Get all unique tags
-  const allTags = useMemo(() => {
+  /** Unique public (non-system) tags, grouped for facet headings — tag strings are unchanged. */
+  const tagFacetGroups = useMemo(() => {
     const tags = new Set<string>()
-    adages.forEach(adage => {
-      adage.tags?.forEach(tag => tags.add(tag))
+    adages.forEach((adage) => {
+      filterPublicTags(adage.tags).forEach((tag) => tags.add(tag))
     })
-    return Array.from(tags).sort()
+    return partitionTagsByFacet(Array.from(tags))
   }, [adages])
 
   // Filter adages based on search and tag
@@ -82,6 +98,18 @@ export default function Archive() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-text-primary">
             The Archive
           </h1>
+          {/* Count: show loading hint while fetching; hide on error (message appears in grid); never show a stale or fake total. */}
+          {loading ? (
+            <p className="text-lg md:text-xl text-text-secondary mt-2">Loading…</p>
+          ) : error ? null : (
+            <p className="text-lg md:text-xl font-semibold text-text-primary mt-2">
+              {formatArchiveAdageCountLine(
+                filteredAdages.length,
+                adages.length,
+                hasActiveFilters
+              )}
+            </p>
+          )}
           <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-4">
             Explore our searchable dictionary of adages, each with definitions, 
             origins, historical context, and cultural interpretations.
@@ -114,44 +142,92 @@ export default function Archive() {
             </svg>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedTag(null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedTag === null
-                  ? 'bg-accent-primary text-text-inverse'
-                  : 'bg-card-bg text-text-primary border border-border-subtle hover:border-accent-primary'
-              }`}
-            >
-              All
-            </button>
-            {allTags.map((tag) => (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 items-center">
               <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
+                onClick={() => setSelectedTag(null)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedTag === tag
+                  selectedTag === null
                     ? 'bg-accent-primary text-text-inverse'
                     : 'bg-card-bg text-text-primary border border-border-subtle hover:border-accent-primary'
                 }`}
               >
-                {tag}
+                All
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Results Count */}
-        <div className="mb-6 text-text-secondary">
-          {loading ? (
-            <p>Loading adages...</p>
-          ) : error ? (
-            <p className="text-error-text">Error: {error}</p>
-          ) : (
-            <p>
-              Showing {filteredAdages.length} of {adages.length} adages
-            </p>
-          )}
+            {tagFacetGroups.languages.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-2">
+                  Languages
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {tagFacetGroups.languages.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedTag === tag
+                          ? 'bg-accent-primary text-text-inverse'
+                          : 'bg-card-bg text-text-primary border border-border-subtle hover:border-accent-primary'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tagFacetGroups.themes.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-2">
+                  Themes
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {tagFacetGroups.themes.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedTag === tag
+                          ? 'bg-accent-primary text-text-inverse'
+                          : 'bg-card-bg text-text-primary border border-border-subtle hover:border-accent-primary'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tagFacetGroups.type.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-2">
+                  Type
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {tagFacetGroups.type.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedTag === tag
+                          ? 'bg-accent-primary text-text-inverse'
+                          : 'bg-card-bg text-text-primary border border-border-subtle hover:border-accent-primary'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Adages Grid */}

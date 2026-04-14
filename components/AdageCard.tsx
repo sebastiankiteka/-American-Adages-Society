@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
+import { filterPublicTags } from '@/lib/tag-facets'
 
 interface AdageCardProps {
   id: string
@@ -19,6 +20,7 @@ interface AdageCardProps {
 }
 
 export default function AdageCard({ id, adage, definition, origin, tags, save_count, featured, featured_reason, featured_from, featured_until }: AdageCardProps) {
+  const publicTags = filterPublicTags(tags)
   const { data: session } = useSession()
   const [isFavorited, setIsFavorited] = useState(false)
   const [favoriting, setFavoriting] = useState(false)
@@ -136,9 +138,9 @@ export default function AdageCard({ id, adage, definition, origin, tags, save_co
             )}
           </div>
         )}
-        {tags && tags.length > 0 && (
+        {publicTags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
-            {tags.map((tag) => (
+            {publicTags.map((tag) => (
               <span
                 key={tag}
                 className="text-xs px-2 py-1 bg-card-bg-muted border border-border-subtle text-text-metadata rounded"
