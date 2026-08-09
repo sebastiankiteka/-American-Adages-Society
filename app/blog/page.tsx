@@ -91,6 +91,11 @@ export default function Blog() {
             Updates on AAS programs, initiatives, and reflections on language, 
             culture, and the wisdom embedded in our everyday expressions.
           </p>
+          {process.env.NEXT_PUBLIC_USE_OFFLINE_DATA === 'true' && (
+            <p className="text-sm text-text-secondary max-w-xl mx-auto mb-4 rounded-md border border-border-subtle bg-card-bg px-3 py-2">
+              Showing bundled blog posts (offline mode). Live database will replace this when re-enabled.
+            </p>
+          )}
           <a
             href="/api/rss.xml"
             className="inline-flex items-center gap-2 text-sm text-accent-primary hover:underline"

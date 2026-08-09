@@ -2,10 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { listOfflineForumSections } from '@/lib/offline-forum'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/forum/sections - Get all forum sections
 export async function GET(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) {
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: listOfflineForumSections(),
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
+
     const { data, error } = await supabase
       .from('forum_sections')
       .select('*')
@@ -44,6 +56,8 @@ export async function GET(request: NextRequest) {
 // POST /api/forum/sections - Create new forum section (admin only)
 export async function POST(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     await requireAdmin()
 
     const body = await request.json()

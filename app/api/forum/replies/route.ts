@@ -2,12 +2,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { OFFLINE_FORUM_THREADS } from '@/lib/offline-forum'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/forum/replies - Get replies (optionally filtered by thread)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const threadId = searchParams.get('thread_id')
+
+    if (isOfflineDataMode()) {
+      const replies = OFFLINE_FORUM_THREADS.flatMap((t) =>
+        t.replies.map((r) => ({
+          ...r,
+          thread: { id: t.id, title: t.title, slug: t.slug },
+        }))
+      )
+      const data = threadId
+        ? replies.filter((r) => r.thread_id === threadId)
+        : replies
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data,
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     // Check if admin is requesting (for admin panel)
     const user = await getCurrentUser().catch(() => null)
@@ -66,6 +87,8 @@ export async function GET(request: NextRequest) {
 // POST /api/forum/replies - Create new reply
 export async function POST(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await getCurrentUser()
 
     if (!user) {

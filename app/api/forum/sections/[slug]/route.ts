@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { getOfflineForumSectionBySlug } from '@/lib/offline-forum'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/forum/sections/[slug] - Get section by slug
 export async function GET(
@@ -10,6 +13,22 @@ export async function GET(
 ) {
   try {
     const { slug } = params
+
+    if (isOfflineDataMode()) {
+      const section = getOfflineForumSectionBySlug(slug)
+      if (!section) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Section not found',
+        }, { status: 404 })
+      }
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: section,
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     const { data, error } = await supabase
       .from('forum_sections')
@@ -56,6 +75,8 @@ export async function PUT(
   { params }: { params: { slug: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     await requireAdmin()
 
     const { slug } = params
@@ -97,6 +118,8 @@ export async function DELETE(
   { params }: { params: { slug: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     await requireAdmin()
 
     const { slug } = params

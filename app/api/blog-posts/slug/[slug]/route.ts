@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, trackView, ApiResponse, getClientIP } from '@/lib/api-helpers'
 import { BlogPost } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { getOfflineBlogPostBySlug } from '@/lib/offline-blog'
 
 // GET /api/blog-posts/slug/[slug] - Get blog post by slug
 export async function GET(
@@ -11,6 +13,23 @@ export async function GET(
 ) {
   try {
     const { slug } = params
+
+    if (isOfflineDataMode()) {
+      const post = getOfflineBlogPostBySlug(slug)
+      if (!post) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Blog post not found',
+        }, { status: 404 })
+      }
+      const response = NextResponse.json<ApiResponse<BlogPost & { score: number }>>({
+        success: true,
+        data: { ...post, score: post.score },
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
+
     const user = await getCurrentUser()
 
     // Get blog post by slug

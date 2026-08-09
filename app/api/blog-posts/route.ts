@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse } from '@/lib/api-helpers'
 import { BlogPost } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { listOfflineBlogPosts, toBlogListItem } from '@/lib/offline-blog'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/blog-posts - List all blog posts (with optional filters)
 export async function GET(request: NextRequest) {
@@ -15,6 +18,26 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo')
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = parseInt(searchParams.get('offset') || '0')
+
+    if (isOfflineDataMode()) {
+      let data = listOfflineBlogPosts({ search, tag, limit: 500, offset: 0 })
+      if (dateFrom) {
+        data = data.filter((p) => (p.published_at || '') >= dateFrom)
+      }
+      if (dateTo) {
+        data = data.filter((p) => (p.published_at || '') <= dateTo)
+      }
+      if (published === 'false') {
+        data = []
+      }
+      data = data.slice(offset, offset + limit)
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: data.map(toBlogListItem),
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     let query = supabase
       .from('blog_posts')
@@ -118,6 +141,8 @@ export async function GET(request: NextRequest) {
 // POST /api/blog-posts - Create new blog post (admin only)
 export async function POST(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await requireAdmin()
     const body = await request.json()
 

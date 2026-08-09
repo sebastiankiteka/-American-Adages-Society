@@ -87,6 +87,11 @@ export default function Forum() {
           <p className="text-lg text-text-primary max-w-2xl mx-auto">
             Join the conversation about adages, their meanings, origins, and cultural significance.
           </p>
+          {process.env.NEXT_PUBLIC_USE_OFFLINE_DATA === 'true' && (
+            <p className="text-sm text-text-secondary max-w-xl mx-auto mt-4 rounded-md border border-border-subtle bg-card-bg px-3 py-2">
+              Showing bundled forum content (offline mode). Posting is disabled until the live database is re-enabled.
+            </p>
+          )}
         </div>
 
         {!session && (

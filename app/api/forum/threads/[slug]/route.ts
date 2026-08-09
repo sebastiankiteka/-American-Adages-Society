@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { getOfflineForumThreadBySlug } from '@/lib/offline-forum'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/forum/threads/[slug] - Get thread by slug
 export async function GET(
@@ -12,6 +15,22 @@ export async function GET(
     const { slug } = params
     const searchParams = request.nextUrl.searchParams
     const sectionSlug = searchParams.get('section')
+
+    if (isOfflineDataMode()) {
+      const thread = getOfflineForumThreadBySlug(slug, sectionSlug)
+      if (!thread) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Thread not found',
+        }, { status: 404 })
+      }
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: thread,
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     // Build query to find thread
     let query = supabase
@@ -92,6 +111,8 @@ export async function PUT(
   { params }: { params: { slug: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await getCurrentUser()
 
     if (!user) {
@@ -171,6 +192,8 @@ export async function DELETE(
   { params }: { params: { slug: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await getCurrentUser()
 
     if (!user) {

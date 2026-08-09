@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { listOfflineForumThreads } from '@/lib/offline-forum'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/forum/threads - Get threads (optionally filtered by section)
 export async function GET(request: NextRequest) {
@@ -10,6 +13,15 @@ export async function GET(request: NextRequest) {
     const sectionId = searchParams.get('section_id')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
+
+    if (isOfflineDataMode()) {
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: listOfflineForumThreads({ sectionId, limit, offset }),
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     let query = supabase
       .from('forum_threads')
@@ -62,6 +74,8 @@ export async function GET(request: NextRequest) {
 // POST /api/forum/threads - Create new thread
 export async function POST(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await getCurrentUser()
 
     if (!user) {

@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse, getClientIP } from '@/lib/api-helpers'
 import { errorLogger } from '@/lib/error-logger'
 import { BlogPost } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { getOfflineBlogPostById } from '@/lib/offline-blog'
+import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
 // GET /api/blog-posts/[id] - Get single blog post with full details
 export async function GET(
@@ -12,6 +15,23 @@ export async function GET(
 ) {
   try {
     const { id } = params
+
+    if (isOfflineDataMode()) {
+      const post = getOfflineBlogPostById(id)
+      if (!post) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Blog post not found',
+        }, { status: 404 })
+      }
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: post,
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
+
     const user = await getCurrentUser()
 
     // Get blog post
@@ -120,6 +140,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await requireAdmin()
     const { id } = params
     const body = await request.json()
@@ -174,6 +196,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (isOfflineDataMode()) return offlineReadOnlyResponse()
+
     const user = await requireAdmin()
     const { id } = params
 
