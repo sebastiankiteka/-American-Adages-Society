@@ -9,6 +9,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzam1iZXlkeHZ0YXBrdGZwcnl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzMxOTkwMSwiZXhwIjoyMDgyODk1OTAxfQ.B8P5mjy7qhJen2vFGZj27bZ4Xw_i3TXVigHRdqJoM6c
 
 # Offline archive data (true while AAS Supabase is unavailable; set false to reconnect)
+USE_OFFLINE_DATA=true
 NEXT_PUBLIC_USE_OFFLINE_DATA=true
 
 # NextAuth Configuration (v5 uses AUTH_SECRET, but NEXTAUTH_SECRET also works)
