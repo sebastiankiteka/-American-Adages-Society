@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/api-helpers'
 import { Adage } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { listOfflineFeatured, toListItem } from '@/lib/offline-adages'
 
 // GET /api/adages/featured - Get currently featured adages (up to 3 for rotation)
 export async function GET(request: NextRequest) {
@@ -10,6 +12,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const limit = parseInt(searchParams.get('limit') || '3')
     const now = new Date().toISOString()
+
+    if (isOfflineDataMode()) {
+      const data = listOfflineFeatured(limit).map((adage) => ({
+        ...toListItem(adage),
+        featured_dates: adage.featured_dates,
+      }))
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data,
+      })
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     // Get currently featured adages
     const { data: featuredAdages, error } = await supabase

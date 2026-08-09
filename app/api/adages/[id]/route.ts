@@ -4,6 +4,8 @@ import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse, getClientIP } from '@/lib/api-helpers'
 import { errorLogger } from '@/lib/error-logger'
 import { Adage } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { getOfflineAdageById } from '@/lib/offline-adages'
 
 // GET /api/adages/[id] - Get single adage with full details
 export async function GET(
@@ -12,6 +14,24 @@ export async function GET(
 ) {
   try {
     const { id } = params
+
+    if (isOfflineDataMode()) {
+      const adage = getOfflineAdageById(id)
+      if (!adage) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Adage not found',
+        }, { status: 404 })
+      }
+
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: adage,
+      })
+      response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200')
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     // Get adage
     const { data: adage, error } = await supabase
@@ -122,6 +142,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (isOfflineDataMode()) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Offline data mode is read-only. Set NEXT_PUBLIC_USE_OFFLINE_DATA=false to use Supabase.',
+      }, { status: 503 })
+    }
+
     const user = await requireAdmin()
     const { id } = params
     const body = await request.json()
@@ -173,6 +200,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (isOfflineDataMode()) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Offline data mode is read-only. Set NEXT_PUBLIC_USE_OFFLINE_DATA=false to use Supabase.',
+      }, { status: 503 })
+    }
+
     const user = await requireAdmin()
     const { id } = params
 

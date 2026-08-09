@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, ApiResponse } from '@/lib/api-helpers'
 import { Adage } from '@/lib/db-types'
+import { isOfflineDataMode } from '@/lib/offline-mode'
+import { listOfflineAdages, toListItem } from '@/lib/offline-adages'
 
 // GET /api/adages - List all adages (with optional filters)
 export async function GET(request: NextRequest) {
@@ -13,6 +15,24 @@ export async function GET(request: NextRequest) {
     const featured = searchParams.get('featured')
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = parseInt(searchParams.get('offset') || '0')
+
+    if (isOfflineDataMode()) {
+      const data = listOfflineAdages({
+        search,
+        tag,
+        featured: featured === 'true',
+        limit,
+        offset,
+      }).map(toListItem)
+
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data,
+      })
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+      response.headers.set('X-Data-Mode', 'offline')
+      return response
+    }
 
     let query = supabase
       .from('adages')
@@ -110,6 +130,13 @@ export async function GET(request: NextRequest) {
 // POST /api/adages - Create new adage (admin only)
 export async function POST(request: NextRequest) {
   try {
+    if (isOfflineDataMode()) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Offline data mode is read-only. Set NEXT_PUBLIC_USE_OFFLINE_DATA=false to use Supabase.',
+      }, { status: 503 })
+    }
+
     const user = await requireAdmin()
     const body = await request.json()
 

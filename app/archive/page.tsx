@@ -114,6 +114,11 @@ export default function Archive() {
             Explore our searchable dictionary of adages, each with definitions, 
             origins, historical context, and cultural interpretations.
           </p>
+          {process.env.NEXT_PUBLIC_USE_OFFLINE_DATA === 'true' && (
+            <p className="text-sm text-text-secondary max-w-xl mx-auto mb-4 rounded-md border border-border-subtle bg-card-bg px-3 py-2">
+              Showing bundled archive data (offline mode). Live database will replace this when re-enabled.
+            </p>
+          )}
           <Link
             href="/featured-calendar"
             className="inline-block text-sm text-accent-primary hover:underline"
