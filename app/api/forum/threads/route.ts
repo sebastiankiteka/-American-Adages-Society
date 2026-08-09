@@ -2,25 +2,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { listOfflineForumThreads } from '@/lib/offline-forum'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
+function offlineThreadsResponse(sectionId: string | null, limit: number, offset: number) {
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data: listOfflineForumThreads({ sectionId, limit, offset }),
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
+
 // GET /api/forum/threads - Get threads (optionally filtered by section)
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const sectionId = searchParams.get('section_id')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+  const searchParams = request.nextUrl.searchParams
+  const sectionId = searchParams.get('section_id')
+  const limit = parseInt(searchParams.get('limit') || '50')
+  const offset = parseInt(searchParams.get('offset') || '0')
 
+  try {
     if (isOfflineDataMode()) {
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data: listOfflineForumThreads({ sectionId, limit, offset }),
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineThreadsResponse(sectionId, limit, offset)
     }
 
     let query = supabase
@@ -53,6 +57,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
+      if (isLikelyDbUnavailable(error.message)) {
+        return offlineThreadsResponse(sectionId, limit, offset)
+      }
       return NextResponse.json<ApiResponse>({
         success: false,
         error: error.message,
@@ -64,6 +71,9 @@ export async function GET(request: NextRequest) {
       data: data || [],
     })
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineThreadsResponse(sectionId, limit, offset)
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch threads',

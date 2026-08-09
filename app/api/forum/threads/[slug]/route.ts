@@ -2,34 +2,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { getOfflineForumThreadBySlug } from '@/lib/offline-forum'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
+
+function offlineThreadBySlugResponse(slug: string, sectionSlug: string | null) {
+  const thread = getOfflineForumThreadBySlug(slug, sectionSlug)
+  if (!thread) {
+    return NextResponse.json<ApiResponse>({
+      success: false,
+      error: 'Thread not found',
+    }, { status: 404 })
+  }
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data: thread,
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
 
 // GET /api/forum/threads/[slug] - Get thread by slug
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  try {
-    const { slug } = params
-    const searchParams = request.nextUrl.searchParams
-    const sectionSlug = searchParams.get('section')
+  const { slug } = params
+  const searchParams = request.nextUrl.searchParams
+  const sectionSlug = searchParams.get('section')
 
+  try {
     if (isOfflineDataMode()) {
-      const thread = getOfflineForumThreadBySlug(slug, sectionSlug)
-      if (!thread) {
-        return NextResponse.json<ApiResponse>({
-          success: false,
-          error: 'Thread not found',
-        }, { status: 404 })
-      }
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data: thread,
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineThreadBySlugResponse(slug, sectionSlug)
     }
 
     // Build query to find thread
@@ -98,6 +102,9 @@ export async function GET(
       },
     })
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineThreadBySlugResponse(slug, sectionSlug)
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch thread',

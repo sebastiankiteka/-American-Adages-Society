@@ -2,20 +2,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { listOfflineForumSections } from '@/lib/offline-forum'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
+
+function offlineSectionsResponse() {
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data: listOfflineForumSections(),
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
 
 // GET /api/forum/sections - Get all forum sections
 export async function GET(request: NextRequest) {
   try {
     if (isOfflineDataMode()) {
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data: listOfflineForumSections(),
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineSectionsResponse()
     }
 
     const { data, error } = await supabase
@@ -26,6 +30,9 @@ export async function GET(request: NextRequest) {
       .order('order_index', { ascending: true })
 
     if (error) {
+      if (isLikelyDbUnavailable(error.message)) {
+        return offlineSectionsResponse()
+      }
       return NextResponse.json<ApiResponse>({
         success: false,
         error: error.message,
@@ -46,6 +53,9 @@ export async function GET(request: NextRequest) {
       data: organized,
     })
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineSectionsResponse()
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch forum sections',

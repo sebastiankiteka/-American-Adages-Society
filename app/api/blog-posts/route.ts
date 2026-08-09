@@ -3,40 +3,58 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, logActivity, trackView, ApiResponse } from '@/lib/api-helpers'
 import { BlogPost } from '@/lib/db-types'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { listOfflineBlogPosts, toBlogListItem } from '@/lib/offline-blog'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
+function offlineBlogListResponse(options: {
+  search: string | null
+  tag: string | null
+  published: string | null
+  dateFrom: string | null
+  dateTo: string | null
+  limit: number
+  offset: number
+}) {
+  let data = listOfflineBlogPosts({
+    search: options.search,
+    tag: options.tag,
+    limit: 500,
+    offset: 0,
+  })
+  if (options.dateFrom) {
+    data = data.filter((p) => (p.published_at || '') >= options.dateFrom!)
+  }
+  if (options.dateTo) {
+    data = data.filter((p) => (p.published_at || '') <= options.dateTo!)
+  }
+  if (options.published === 'false') {
+    data = []
+  }
+  data = data.slice(options.offset, options.offset + options.limit)
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data: data.map(toBlogListItem),
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
+
 // GET /api/blog-posts - List all blog posts (with optional filters)
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search')
-    const tag = searchParams.get('tag')
-    const published = searchParams.get('published')
-    const dateFrom = searchParams.get('dateFrom')
-    const dateTo = searchParams.get('dateTo')
-    const limit = parseInt(searchParams.get('limit') || '100')
-    const offset = parseInt(searchParams.get('offset') || '0')
+  const searchParams = request.nextUrl.searchParams
+  const search = searchParams.get('search')
+  const tag = searchParams.get('tag')
+  const published = searchParams.get('published')
+  const dateFrom = searchParams.get('dateFrom')
+  const dateTo = searchParams.get('dateTo')
+  const limit = parseInt(searchParams.get('limit') || '100')
+  const offset = parseInt(searchParams.get('offset') || '0')
+  const offlineOpts = { search, tag, published, dateFrom, dateTo, limit, offset }
 
+  try {
     if (isOfflineDataMode()) {
-      let data = listOfflineBlogPosts({ search, tag, limit: 500, offset: 0 })
-      if (dateFrom) {
-        data = data.filter((p) => (p.published_at || '') >= dateFrom)
-      }
-      if (dateTo) {
-        data = data.filter((p) => (p.published_at || '') <= dateTo)
-      }
-      if (published === 'false') {
-        data = []
-      }
-      data = data.slice(offset, offset + limit)
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data: data.map(toBlogListItem),
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineBlogListResponse(offlineOpts)
     }
 
     let query = supabase
@@ -84,6 +102,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
+      if (isLikelyDbUnavailable(error.message)) {
+        return offlineBlogListResponse(offlineOpts)
+      }
       return NextResponse.json<ApiResponse>({
         success: false,
         error: error.message,
@@ -131,6 +152,9 @@ export async function GET(request: NextRequest) {
     
     return response
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineBlogListResponse(offlineOpts)
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch blog posts',

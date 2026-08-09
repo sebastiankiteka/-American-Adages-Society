@@ -2,32 +2,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, ApiResponse } from '@/lib/api-helpers'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { OFFLINE_FORUM_THREADS } from '@/lib/offline-forum'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
 
+function offlineRepliesResponse(threadId: string | null) {
+  const replies = OFFLINE_FORUM_THREADS.flatMap((t) =>
+    t.replies.map((r) => ({
+      ...r,
+      thread: { id: t.id, title: t.title, slug: t.slug },
+    }))
+  )
+  const data = threadId ? replies.filter((r) => r.thread_id === threadId) : replies
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data,
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
+
 // GET /api/forum/replies - Get replies (optionally filtered by thread)
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const threadId = searchParams.get('thread_id')
+  const searchParams = request.nextUrl.searchParams
+  const threadId = searchParams.get('thread_id')
 
+  try {
     if (isOfflineDataMode()) {
-      const replies = OFFLINE_FORUM_THREADS.flatMap((t) =>
-        t.replies.map((r) => ({
-          ...r,
-          thread: { id: t.id, title: t.title, slug: t.slug },
-        }))
-      )
-      const data = threadId
-        ? replies.filter((r) => r.thread_id === threadId)
-        : replies
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data,
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineRepliesResponse(threadId)
     }
 
     // Check if admin is requesting (for admin panel)
@@ -66,6 +68,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
+      if (isLikelyDbUnavailable(error.message)) {
+        return offlineRepliesResponse(threadId)
+      }
       return NextResponse.json<ApiResponse>({
         success: false,
         error: error.message,
@@ -77,6 +82,9 @@ export async function GET(request: NextRequest) {
       data: data || [],
     })
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineRepliesResponse(threadId)
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch replies',

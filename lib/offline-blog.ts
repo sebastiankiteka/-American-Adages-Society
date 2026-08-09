@@ -13,9 +13,10 @@ const NOW = '2026-01-15T12:00:00.000Z'
 
 function post(
   partial: Omit<BlogPost, 'views_count' | 'published' | 'created_at' | 'updated_at'> &
-    Partial<Pick<BlogPost, 'views_count' | 'published' | 'created_at' | 'updated_at'>>
+    Partial<Pick<BlogPost, 'views_count' | 'published' | 'created_at' | 'updated_at'>> &
+    Partial<Pick<OfflineBlogPost, 'score' | 'comment_count' | 'activity_count' | 'view_count'>>
 ): OfflineBlogPost {
-  return {
+  const base = {
     views_count: 0,
     published: true,
     created_at: NOW,
@@ -23,10 +24,13 @@ function post(
     score: 0,
     comment_count: 0,
     activity_count: 0,
-    view_count: 0,
-    userVote: null,
-    comments: [],
+    userVote: null as null,
+    comments: [] as unknown[],
     ...partial,
+  }
+  return {
+    ...base,
+    view_count: partial.view_count ?? base.views_count,
   }
 }
 

@@ -13,3 +13,16 @@ export function isOfflineDataMode(): boolean {
   const publicFlag = process.env['NEXT_PUBLIC_USE_OFFLINE_DATA']
   return serverFlag === 'true' || publicFlag === 'true'
 }
+
+/** True when a Supabase call failed because the project is paused / unreachable. */
+export function isLikelyDbUnavailable(error: unknown): boolean {
+  const msg =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'string'
+        ? error
+        : String(error ?? '')
+  return /fetch failed|Failed to fetch|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|timeout|project (is )?paused|502|503|504/i.test(
+    msg
+  )
+}

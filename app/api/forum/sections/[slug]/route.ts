@@ -2,32 +2,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCurrentUser, requireAdmin, ApiResponse } from '@/lib/api-helpers'
-import { isOfflineDataMode } from '@/lib/offline-mode'
+import { isLikelyDbUnavailable, isOfflineDataMode } from '@/lib/offline-mode'
 import { getOfflineForumSectionBySlug } from '@/lib/offline-forum'
 import { offlineReadOnlyResponse } from '@/lib/offline-readonly'
+
+function offlineSectionBySlugResponse(slug: string) {
+  const section = getOfflineForumSectionBySlug(slug)
+  if (!section) {
+    return NextResponse.json<ApiResponse>({
+      success: false,
+      error: 'Section not found',
+    }, { status: 404 })
+  }
+  const response = NextResponse.json<ApiResponse>({
+    success: true,
+    data: section,
+  })
+  response.headers.set('X-Data-Mode', 'offline')
+  return response
+}
 
 // GET /api/forum/sections/[slug] - Get section by slug
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { slug } = params
   try {
-    const { slug } = params
-
     if (isOfflineDataMode()) {
-      const section = getOfflineForumSectionBySlug(slug)
-      if (!section) {
-        return NextResponse.json<ApiResponse>({
-          success: false,
-          error: 'Section not found',
-        }, { status: 404 })
-      }
-      const response = NextResponse.json<ApiResponse>({
-        success: true,
-        data: section,
-      })
-      response.headers.set('X-Data-Mode', 'offline')
-      return response
+      return offlineSectionBySlugResponse(slug)
     }
 
     const { data, error } = await supabase
@@ -39,6 +42,9 @@ export async function GET(
       .single()
 
     if (error || !data) {
+      if (error && isLikelyDbUnavailable(error.message)) {
+        return offlineSectionBySlugResponse(slug)
+      }
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'Section not found',
@@ -62,6 +68,9 @@ export async function GET(
       },
     })
   } catch (error: any) {
+    if (isOfflineDataMode() || isLikelyDbUnavailable(error)) {
+      return offlineSectionBySlugResponse(slug)
+    }
     return NextResponse.json<ApiResponse>({
       success: false,
       error: error.message || 'Failed to fetch section',
